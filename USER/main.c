@@ -37,12 +37,9 @@ int main(void)
 	TIM5_Int_Init(8400, 2000);   //200ms，可开关，延时作用
 		
 	LED_Init();
-	EXTIX_Init();
-	
-	Modbus_RegMap();
-	
+	EXTIX_Init();	
+	Modbus_RegMap();	
 	DMA2_232_Config();	     
-
 	Motor_Restore(); //上电复位回原点
 	
 	while(1)

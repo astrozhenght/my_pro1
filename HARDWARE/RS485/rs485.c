@@ -79,7 +79,7 @@ void RS485_Send_Data(u8 *buf, u8 len)
 	for(t = 0; t < len; t++)	//循环发送数据
 	{
 	  while(USART_GetFlagStatus(USART2, USART_FLAG_TC)==RESET){}; //等待发送结束		
-    USART_SendData(USART2, buf[t]); 
+	  USART_SendData(USART2, buf[t]); 
 	}	 
 	while(USART_GetFlagStatus(USART2,USART_FLAG_TC)==RESET); 	//等待发送结束
 	

@@ -12,7 +12,7 @@ float SUM_Err = 0.0f;
 
 void PID_Init(void)
 {
-	P = 6.0f;  	//响应速度
+	P = 6.0f;  	//回复力
 	I = 4.0f;   //静态误差
 	D = 6.0f;   //阻尼力
 }
@@ -20,7 +20,8 @@ void PID_Init(void)
 /**
  *info:位置式PID
  *参数：期望位置，当前位置，最大速度
- *返回值：PID得到的速度值
+ *输入量：位置
+ *输出量：速度值
 **/
 float PID_Calculate(float exp_distance, float now_distance, float limit)
 {
@@ -73,13 +74,13 @@ float PID_Calculate(float exp_distance, float now_distance, float limit)
 void PID_Control_SPD(float position, float speed)
 {
 	//pid运算后的值赋给速度
-	Page4_Data_RunSpeed = PID_Calculate(position, Page2_Data_Location, speed);  //给定40mm，速度最大15mm/s
+	Data_RunSpeed = PID_Calculate(position, Data_Location, speed);  //给定40mm，速度最大15mm/s
 				
-	if(Page2_Data_Location > (position+0.02f))
+	if(Data_Location > (position+0.02f))
 	{
 		Motor_Dir = DIR_LEFT;  //电机左转
 	}
-	else if(Page2_Data_Location < (position-0.03f))
+	else if(Data_Location < (position-0.03f))
 	{
 		Motor_Dir = DIR_RIGHT; //电机右转
 	}

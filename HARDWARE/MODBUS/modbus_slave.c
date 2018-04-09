@@ -5,105 +5,88 @@
 #include "led.h"
 #include "rs485.h"
 
-#define RS232_ADDR  0x01    //从机地址
+#define RS232_ADDR  0x01   //从机地址
 #define REG_MAX	    1000   
 
-u16     REG_Start_Addr;  		//寄存器起始地址变量，两个字节组成
+u16   REG_Start_Addr;  	   //寄存器起始地址变量，两个字节组成
 
-u16     Present_Page = 1;    //默认为一画面
+u16   Present_Mode = 1;    //默认为模式选择
+u16   Status_Recover = 0;  //复位指示灯 
+u16   Button_Recover = 0;  //复位按钮 
+u16   Button_Auto = 0;     //自动模式切换按钮
+u16   Button_Single = 0;   //单步模式切换按钮
+u16   Button_Manual = 0;   //手动模式切换按钮
+u16   Button_Start = 0;    //启动按钮 
+u16   Button_Stop = 0;     //停止按钮 
+u16   Button_BackMain = 0; //返回主界面按钮 
+u16   Status_Alarm = 0;    //警报指示灯
+u16   Status_Pause = 0;    //暂停指示灯
+u16   Status_Return = 0;   //返回指示灯
+u16   Status_Wait = 0;     //等待指示灯
+u16   Status_EndLeft = 0;  //左极限指示灯
+u16   Status_EndRight = 0; //右极限指示灯
+u16   Status_DirLeft = 0;  //左运动指示灯
+u16   Status_DirRight = 0; //右运动指示灯
+float Data_RTSpeed = 0.0f;    //实时速度
+float Data_Location = 0.0f;   //实时位置
+float Data_Speed1 = 10.0f;    //段速1
+float Data_Speed2 = 10.0f;    //段速2
+float Data_Speed3 = 10.0f;    //段速3
+float Data_Speed4 = 10.0f;    //段速4
+float Data_BKSpeed = 10.0f;   //返回速度
+u16   Data_Stage = 0;   	  //单步段数
+float Data_Speed = 10.0f;  	  //单步段速
+float Data_RunSpeed = 10.0f;  //运行速度
+u16   Button_Left = 0;        //左运动按钮 
+u16   Button_Right = 0;       //右运动按钮 
+int   Data_Animation = 0;     //动画位置
 
-u16     Page1_Status_Recover = 0;  //复位指示灯 
-u16     Page1_Button_Recover = 0;  //复位按钮 
-u16     Page1_Button_Auto = 0;     //自动模式切换按钮
-u16     Page1_Button_Single = 0;   //单步模式切换按钮
-u16     Page1_Button_Manual = 0;   //手动模式切换按钮
-
-u16     Page2_Button_Start = 0;    //启动按钮 
-u16     Page2_Button_Stop = 0;     //停止按钮 
-u16     Page2_Button_BackMain = 0; //返回主界面按钮 
-u16     Page2_Status_Alarm = 0;    //警报指示灯
-u16     Page2_Status_Pause = 0;    //暂停指示灯
-u16     Page2_Status_Return = 0;   //返回指示灯
-u16     Page2_Status_Wait = 0;     //等待指示灯
-u16     Page2_Status_EndLeft = 0;  //左极限指示灯
-u16     Page2_Status_EndRight = 0; //右极限指示灯
-u16     Page2_Status_DirLeft = 0;  //左运动指示灯
-u16     Page2_Status_DirRight = 0; //右运动指示灯
-
-float   Page2_Data_RTSpeed = 0.0f;    //实时速度
-float   Page2_Data_Location = 0.0f;   //实时位置
-float   Page2_Data_Speed1 = 10.0f;     //段速1
-float   Page2_Data_Speed2 = 10.0f;     //段速2
-float   Page2_Data_Speed3 = 10.0f;     //段速3
-float   Page2_Data_Speed4 = 10.0f;    //段速4
-float   Page2_Data_BKSpeed = 10.0f;    //返回速度
-
-u16     Page3_Data_Stage = 0;   	 //单步段数
-float   Page3_Data_Speed = 10.0f;  //单步段速
-
-float   Page4_Data_RunSpeed = 10.0f; //运行速度
-u16     Page4_Button_Left = 0;       //左运动按钮 
-u16     Page4_Button_Right = 0;      //右运动按钮 
-int     Page4_Data_Animation = 0;     //动画位置
-
-u16 *   Modbus_HoldReg[REG_MAX];  //保持寄存器指针，一个字节
+u16*  Modbus_HoldReg[REG_MAX];  //保持寄存器指针，一个字节
 
 void Modbus_RegMap(void)
 {	
 	//按钮指针指向	0-19
-	Modbus_HoldReg[0]  = &Page1_Button_Recover;  //复位按钮 
-	Modbus_HoldReg[1]  = &Page1_Button_Auto;     //自动模式切换按钮
-	Modbus_HoldReg[2]  = &Page1_Button_Single;   //单步模式切换按钮
-	Modbus_HoldReg[3]  = &Page1_Button_Manual;   //手动模式切换按钮
-	Modbus_HoldReg[4]  = &Page2_Button_Start;    //启动按钮
-	Modbus_HoldReg[5]  = &Page2_Button_Stop;     //停止按钮 
-	Modbus_HoldReg[6]  = &Page2_Button_BackMain; //返回主界面按钮
-	
-	Modbus_HoldReg[15]  = &Page4_Button_Left;   //手动左按钮
-	Modbus_HoldReg[16]  = &Page4_Button_Right;   //手动右按钮
-		
-	//指示灯指向 20-49 	
-	Modbus_HoldReg[22]  = &Page1_Status_Recover; //第一页首地址
-	
-	Modbus_HoldReg[23]  = &Page2_Status_Return;  //第二页首地址
-	Modbus_HoldReg[24]  = &Page2_Status_Wait;
-	Modbus_HoldReg[25]  = &Page2_Status_EndLeft;
-	Modbus_HoldReg[26]  = &Page2_Status_EndRight;
-	Modbus_HoldReg[27]  = &Page2_Status_DirLeft;
-	Modbus_HoldReg[28]  = &Page2_Status_DirRight;
-	
-	Modbus_HoldReg[40]  = &Page2_Status_Alarm;
-	
+	Modbus_HoldReg[0]  = &Button_Recover;  //复位按钮 
+	Modbus_HoldReg[1]  = &Button_Auto;     //自动模式切换按钮
+	Modbus_HoldReg[2]  = &Button_Single;   //单步模式切换按钮
+	Modbus_HoldReg[3]  = &Button_Manual;   //手动模式切换按钮
+	Modbus_HoldReg[4]  = &Button_Start;    //启动按钮
+	Modbus_HoldReg[5]  = &Button_Stop;     //停止按钮 
+	Modbus_HoldReg[6]  = &Button_BackMain; //返回主界面按钮	
+	Modbus_HoldReg[15] = &Button_Left;     //手动左按钮
+	Modbus_HoldReg[16] = &Button_Right;    //手动右按钮		
+	//指示灯指向 20-49 
+	Modbus_HoldReg[22] = &Status_Recover; //第一页首地址	
+	Modbus_HoldReg[23] = &Status_Return;  //第二页首地址
+	Modbus_HoldReg[24] = &Status_Wait;
+	Modbus_HoldReg[25] = &Status_EndLeft;
+	Modbus_HoldReg[26] = &Status_EndRight;
+	Modbus_HoldReg[27] = &Status_DirLeft;
+	Modbus_HoldReg[28] = &Status_DirRight;	
+	Modbus_HoldReg[40] = &Status_Alarm;	
 	//浮点数  50-199
-	Modbus_HoldReg[50] = ((u16*)(&Page2_Data_RTSpeed))+1;  //实时速度
-	Modbus_HoldReg[51] = ((u16*)(&Page2_Data_RTSpeed))+0;     
-	Modbus_HoldReg[52] = ((u16*)(&Page2_Data_Location))+1; //实时位置    
-	Modbus_HoldReg[53] = ((u16*)(&Page2_Data_Location))+0;
-	
-	Modbus_HoldReg[60] = ((u16*)(&Page2_Data_Speed1))+1; //段速1
-	Modbus_HoldReg[61] = ((u16*)(&Page2_Data_Speed1))+0; 	
-	Modbus_HoldReg[62] = ((u16*)(&Page2_Data_Speed2))+1; //段速2    
-	Modbus_HoldReg[63] = ((u16*)(&Page2_Data_Speed2))+0;
-	
-	Modbus_HoldReg[70] = ((u16*)(&Page2_Data_Speed3))+1; //段速3
-	Modbus_HoldReg[71] = ((u16*)(&Page2_Data_Speed3))+0;     
-	Modbus_HoldReg[72] = ((u16*)(&Page2_Data_Speed4))+1; //段速4    
-	Modbus_HoldReg[73] = ((u16*)(&Page2_Data_Speed4))+0;
-	
-	Modbus_HoldReg[80] = ((u16*)(&Page2_Data_BKSpeed))+1;//返回速度   
-	Modbus_HoldReg[81] = ((u16*)(&Page2_Data_BKSpeed))+0;	
-
-	Modbus_HoldReg[82]  = &Page3_Data_Stage;  //段数
-	Modbus_HoldReg[90] = ((u16*)(&Page3_Data_Speed))+1;//返回速度   
-	Modbus_HoldReg[91] = ((u16*)(&Page3_Data_Speed))+0;
-	
-	Modbus_HoldReg[92] = ((u16*)(&Page4_Data_Animation))+1;//返回速度   
-	Modbus_HoldReg[93] = ((u16*)(&Page4_Data_Animation))+0;	
-	Modbus_HoldReg[100] = ((u16*)(&Page4_Data_RunSpeed))+1;//运行速度   
-	Modbus_HoldReg[101] = ((u16*)(&Page4_Data_RunSpeed))+0;	
-
-	//表示画面编号
-	Modbus_HoldReg[200] = &Present_Page;  
+	Modbus_HoldReg[50] = ((u16*)(&Data_RTSpeed))+1;  //实时速度
+	Modbus_HoldReg[51] = ((u16*)(&Data_RTSpeed))+0;     
+	Modbus_HoldReg[52] = ((u16*)(&Data_Location))+1; //实时位置    
+	Modbus_HoldReg[53] = ((u16*)(&Data_Location))+0;	
+	Modbus_HoldReg[60] = ((u16*)(&Data_Speed1))+1; //段速1
+	Modbus_HoldReg[61] = ((u16*)(&Data_Speed1))+0; 	
+	Modbus_HoldReg[62] = ((u16*)(&Data_Speed2))+1; //段速2    
+	Modbus_HoldReg[63] = ((u16*)(&Data_Speed2))+0;	
+	Modbus_HoldReg[70] = ((u16*)(&Data_Speed3))+1; //段速3
+	Modbus_HoldReg[71] = ((u16*)(&Data_Speed3))+0;     
+	Modbus_HoldReg[72] = ((u16*)(&Data_Speed4))+1; //段速4    
+	Modbus_HoldReg[73] = ((u16*)(&Data_Speed4))+0;	
+	Modbus_HoldReg[80] = ((u16*)(&Data_BKSpeed))+1;//返回速度   
+	Modbus_HoldReg[81] = ((u16*)(&Data_BKSpeed))+0;	
+	Modbus_HoldReg[82] = &Data_Stage;  			   //单步段数
+	Modbus_HoldReg[90] = ((u16*)(&Data_Speed))+1;  //单步段速   
+	Modbus_HoldReg[91] = ((u16*)(&Data_Speed))+0;	
+	Modbus_HoldReg[92] = ((u16*)(&Data_Animation))+1;//动画位置   
+	Modbus_HoldReg[93] = ((u16*)(&Data_Animation))+0;	
+	Modbus_HoldReg[100] = ((u16*)(&Data_RunSpeed))+1;//运行速度   
+	Modbus_HoldReg[101] = ((u16*)(&Data_RunSpeed))+0;		
+	Modbus_HoldReg[200] = &Present_Mode;   //表示当前模式
 }
 
 /**  
