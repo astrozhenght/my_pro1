@@ -4,7 +4,7 @@
 #include "sys.h"
 #include "timer.h"
 
-//·¶Î§[0.0, 0.05]
+//·¶Î§[0.0, 0.05)
 
 float P,I,D;
 float Err[2];
