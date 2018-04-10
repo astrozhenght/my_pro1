@@ -31,7 +31,7 @@ void Mode_Control(void)
 	{	
 		if(Status_Motion == STATUS_REST)  //在静止过程中
 		{
-			if((Data_Location>=-0.0f) && (Data_Location<0.05f)) //工作台在原点
+			if((Data_Location>=-0.1f) && (Data_Location<=0.1f)) //工作台在原点
 			{				
 				Button_Recover = 0;  //在原点按下复位无响应
 				if(Button_Auto == 1) //按下自动模式按键
@@ -86,7 +86,7 @@ void Mode_Control(void)
 		{
 			if(Status_Motion == STATUS_REST) //停止状态
 			{
-				if((Data_Location>=-0.0f) && (Data_Location<0.05f)) //工作台在原点 [0.0mm,0.05mm)
+				if((Data_Location>=-0.1f) && (Data_Location<=0.1f)) //工作台在原点
 				{
 					if((Data_Speed1>0) && (Data_Speed2>0) && \
 					   (Data_Speed3>0) && (Data_Speed4>0) && \
@@ -122,7 +122,6 @@ void Mode_Control(void)
 			Button_Stop = 0;  
 		}	
 	}
-
 	if(Flag_Mode == MODE_SINGLE)  //单步模式
 	{
 		if(Button_Start == 1) //按下启动按钮
@@ -132,7 +131,7 @@ void Mode_Control(void)
 				Data_Stage++;  //段数加一
 				if(Data_Stage == 1) //等于1说明第一次按下启动按钮
 				{
-					if((Data_Location>=-0.0f) && (Data_Location<0.05f)) //工作台在原点 [0.0mm,0.05mm)
+					if((Data_Location>=-0.1f) && (Data_Location<=0.1f)) //工作台在原点
 					{
 						Status_Motion = STATUS_SINGMOD; //当前状态为单步状态
 					}
@@ -200,7 +199,7 @@ void Mode_Control(void)
 			
 			if(Button_Recover == 1)  //按下复位
 			{
-				if((Data_Location>=-0.0f) && (Data_Location<0.05f)) //工作台在原点 [0.0mm,0.05mm)
+				if((Data_Location>=-0.1f) && (Data_Location<=0.1f)) //工作台在原点
 				{
 					//未处理
 				}
@@ -270,7 +269,7 @@ void Mode_Control(void)
 	{
 		Status_EndRight = 0; //右极限灯灭	
 	}
-	if((Data_Location>=-0.0f) && (Data_Location<0.05f)) //工作台在原点 [0.0mm,0.05mm)
+	if((Data_Location>=-0.1f) && (Data_Location<=0.1f)) //工作台在原点
 	{
 		Status_Recover = 1;
 	}
@@ -296,14 +295,45 @@ void FreqChg_Control(void)
  *作用：电机复位回原点的第一步运动
  *流程：复位状态进入第一步，修改频率为50
 **/
+//void Motor_Restore(void)
+//{	
+//	Status_Return = 1;  //返回灯亮
+//	
+//	if(Flag_Init == DOING)  //表示正在上电复位
+//	{
+//		Data_RunSpeed = 15.0f;  //速度15mm/s
+//		
+//		if(GPIO_ReadInputDataBit(GPIOI, LEFT_LIMIT) == Bit_SET)  //位置在左极限
+//		{
+//			Motor_Dir = DIR_RIGHT; 			//电机方向改为右转
+//			Status_Motion = STATUS_TWOSTEP; //运动状态为复位第二步状态
+//			Location_Left_Limit = 1.0f;  	//记录左极限当前位置
+//		}
+//		else   //除了左极限的其他位置
+//		{
+//			Motor_Dir = DIR_LEFT; 		//电机方向改为左转
+//			Status_Motion = STATUS_ONESTEP; //运动状态为复位第一步状态
+//		}		
+//	}
+//	else if(Flag_Init == DONE)  //表示上电复位完成了
+//	{
+//		if((Data_Location>=-0.0f) && (Data_Location<0.05f)) //工作台在原点 [0.0mm,0.05mm)
+//		{
+//			Status_Return = 0;  //返回灯灭
+//		}
+//		else   //工作台不在原点
+//		{
+//			Status_Motion = STATUS_THREESTEP; //运动状态为复位第三步状态			
+//		}
+//	}
+//}
+
 void Motor_Restore(void)
 {	
-	Status_Return = 1;  //返回灯亮
-	
+	Status_Return = 1;  	//返回灯亮	
 	if(Flag_Init == DOING)  //表示正在上电复位
 	{
-		Data_RunSpeed = 15.0f;  //速度15mm/s
-		
+		Data_RunSpeed = 15.0f;  //速度15mm/s	
 		if(GPIO_ReadInputDataBit(GPIOI, LEFT_LIMIT) == Bit_SET)  //位置在左极限
 		{
 			Motor_Dir = DIR_RIGHT; 			//电机方向改为右转
@@ -314,18 +344,57 @@ void Motor_Restore(void)
 		{
 			Motor_Dir = DIR_LEFT; 		//电机方向改为左转
 			Status_Motion = STATUS_ONESTEP; //运动状态为复位第一步状态
-		}		
-	}
+		}	
+	}	
 	else if(Flag_Init == DONE)  //表示上电复位完成了
 	{
-		if((Data_Location>=-0.0f) && (Data_Location<0.05f)) //工作台在原点 [0.0mm,0.05mm)
+		if(GPIO_ReadInputDataBit(GPIOI, LEFT_LIMIT) == Bit_SET)  //位置在左极限
 		{
-			Status_Return = 0;  //返回灯灭
+			Data_RunSpeed = 15.0f;  //速度15mm/s
+			Motor_Dir = DIR_RIGHT; 	//电机向右转动
+			Status_Motion = STATUS_TWOSTEP; //表示当前正在复位的第二步
 		}
-		else   //工作台不在原点
+		else  //除了左极限的其他位置
 		{
-			Status_Motion = STATUS_THREESTEP; //运动状态为复位第三步状态			
-		}
+			if(Data_Location <= -10.0f)  //位置小于-10mm
+			{
+				Motor_Dir = DIR_RIGHT; 			//电机向右转动
+				Data_RunSpeed = 15.0f;  		//速度15mm/s
+				Status_Motion = STATUS_TWOSTEP; //表示当前正在复位的第二步
+			}
+			else if(Data_Location <= -4.0f)
+			{
+				Motor_Dir = DIR_RIGHT; 			//电机向右转动
+				Data_RunSpeed = 2.0f;  			   //速度2mm/s	
+				Status_Motion = STATUS_TWOSTEP; //表示当前正在复位的第二步
+			}
+			else if(((Data_Location<-0.1f) && (Data_Location>-4.0f))) //这段距离出去，定时返回会检测到上升沿
+			{
+				Motor_Dir = DIR_LEFT; 			//电机向左转动
+				Data_RunSpeed = 15.0f;  		//速度15mm/s	
+				Status_Motion = STATUS_ONESTEP; //表示当前正在复位的第一步
+				TIM5_Count = 5; //定时器5将进入x次中断后才会关闭					
+				TIM_Cmd(TIM5, ENABLE); 	//使能定时器5，中断计时			
+			}
+			else if((Data_Location>0.1f) && (Data_Location<5.0f))  //这段距离出去，定时返回会检测到上升沿
+			{
+				Motor_Dir = DIR_LEFT; 			//电机向左转动
+				Data_RunSpeed = 15.0f;  		//速度15mm/s			
+				Status_Motion = STATUS_ONESTEP; //表示当前正在复位的第一步
+				TIM5_Count = 6; //定时器5将进入x次中断后才会关闭					
+				TIM_Cmd(TIM5, ENABLE); 	//使能定时器5，中断计时
+			}
+			else if(Data_Location >= 5.0f)
+			{
+				Motor_Dir = DIR_LEFT; 			//电机向左转动
+				Data_RunSpeed = 15.0f;  		//速度15mm/s
+				Status_Motion = STATUS_ONESTEP; //表示当前正在复位的第一步
+			}
+			else  //在原点位置
+			{
+				Status_Return = 0;  //返回灯灭
+			}
+		}		
 	}
 }
 
@@ -356,7 +425,8 @@ void EXTI9_5_IRQHandler(void)
 	{	
 		if(Status_Motion == STATUS_ONESTEP) //运动状态为复位第一步状态
 		{		
-			TIM5_Count = 5; //TIM5进入5次更新中断后关闭TIM5					
+			//复位回原点时间动态处理，20mm/速度/0.2s = TIM5_Count
+			TIM5_Count = (u8)(15.0f/Data_RunSpeed/0.2f); //定时器5将进入x次中断后才会关闭					
 			TIM_Cmd(TIM5, ENABLE); 	//使能定时器5			
 		}
 		else if(Status_Motion == STATUS_TWOSTEP)  //运动状态为复位第二步状态
@@ -445,26 +515,36 @@ void TIM3_IRQHandler(void)
 			{
 				PID_Control_SPD(160.03f, Present_Data_Speed[Data_Stage-1]); //PID控制			
 			}		
-			else if(Data_Stage == 5)  //回原点
-			{
-				PID_Control_SPD(0.03f, Present_Data_Speed[Data_Stage-1]); //PID控制	
-			}				
+//			else if(Data_Stage == 5)  //回原点
+//			{
+//				PID_Control_SPD(0.03f, Present_Data_Speed[Data_Stage-1]); //PID控制	
+//			}				
 		}				
 		else if(Status_Motion == STATUS_TWOSTEP) //在复位的第二步状态中
 		{
-			if(Location_Left_Limit != 0)  //不等于零说明到过左极限
+			if(Flag_Init == DOING)  //当前为上电复位状态
 			{
-				if((Data_Location-Location_Left_Limit) > 70.0f) 
+				if(Location_Left_Limit != 0)  //不等于零说明到过左极限
 				{
-					Data_RunSpeed = 2.0f;   //减速运行	
-					Location_Left_Limit = 0.0f;   //处理过极限后，位置归零
+					if((Data_Location-Location_Left_Limit) > 70.0f) 
+					{
+						Data_RunSpeed = 2.0f;   //减速运行	
+						Location_Left_Limit = 0.0f;   //处理过极限后，位置归零
+					}
+				}
+			}
+			else if(Flag_Init == DONE) //开机复位完成，可以得到正确距离
+			{
+				if((Data_Location>-17.0f) && (Data_Location<-0.4f)) //复位位置在-17mm后，降速到2mm/s
+				{
+					Data_RunSpeed = 2.0f; 	//低速运行一小段距离			
 				}
 			}
 		}
-		else if(Status_Motion == STATUS_THREESTEP) //按下了复位按钮
-		{
-			PID_Control_SPD(0.03f, 15.0f); //更改运行速度
-		}
+//		else if(Status_Motion == STATUS_THREESTEP) //按下了复位按钮
+//		{
+//			PID_Control_SPD(0.03f, 15.0f); //更改运行速度
+//		}
 		else if(Status_Motion == STATUS_SINGMOD)
 		{
 			if(Data_Stage <= 4)  //段数小于等于4
@@ -473,7 +553,10 @@ void TIM3_IRQHandler(void)
 			}
 			else if(Data_Stage == 5)
 			{
-				PID_Control_SPD(0.03f, Data_BKSpeed); //PID控制								
+				Motor_Dir = DIR_LEFT; 			//电机向左转动
+				Status_Motion = STATUS_ONESTEP; //回原点转为复位操作
+				Data_RunSpeed = Data_BKSpeed;   //设置返回速度
+//				PID_Control_SPD(0.03f, Data_BKSpeed); //PID控制								
 			}
 		}
 	}
@@ -490,8 +573,8 @@ void TIM5_IRQHandler(void)
 			TIM_Cmd(TIM5, DISABLE);   //失能定时器5			
 			if((Flag_Init==DOING) && (Status_Motion==STATUS_REST))  	  //上电复位
  			{
-				Encoder_Pulse_NUM = 0;  //位置归零
-				Flag_Init = DONE;    	//标志上电复位完成
+				Encoder_Pulse_NUM = 0; //位置归零
+				Flag_Init = DONE;   //标志上电复位完成
 				//按钮清空
 				Button_Recover = 0; //复位按钮 
 				Button_Stop = 0;    //停止按钮
@@ -510,7 +593,7 @@ void TIM5_IRQHandler(void)
 				Motor_Dir = DIR_STOP; 		//电机方向改为停止
 				Status_Motion = STATUS_REST; //运动状态改为停止				
 				Data_Stage = 0; 	//自动模式的段数改为0段
-				Status_Return = 0; //返回状态灯置0		
+				Status_Return = 0; //返回状态灯置0				
 			}		
 			if(Motor_Dir == DIR_STOP) //消除抖动，200ms后依然是静止状态
 			{
@@ -523,12 +606,12 @@ void TIM5_IRQHandler(void)
 					}
 					Motor_Dir = DIR_STOP;
 				}
-				else if(Status_Motion == STATUS_THREESTEP)
-				{
-					Status_Motion = STATUS_REST; //运动状态改为停止
-					Data_Stage = 0; //自动模式的段数改为0段
-					Status_Return = 0; //返回状态灯灭
-				}
+//				else if(Status_Motion == STATUS_THREESTEP)
+//				{
+//					Status_Motion = STATUS_REST; //运动状态改为停止
+//					Data_Stage = 0; //自动模式的段数改为0段
+//					Status_Return = 0; //返回状态灯灭
+//				}
 				else if(Status_Motion == STATUS_AUTOMOD)
 				{
 					if((Data_Stage==4) && (Status_Wait==0)) //说明需要定时3s
@@ -541,14 +624,18 @@ void TIM5_IRQHandler(void)
 					{
 						Status_Wait = 0;	//等待指示灯灭
 						Status_Return = 1;	//返回状态灯亮
-						Data_Stage++; 		//第五段						
+						Data_Stage++; 		//第五段	
+						
+						Motor_Dir = DIR_LEFT; 			//电机向左转动
+						Status_Motion = STATUS_ONESTEP; //回原点转为复位操作
+						Data_RunSpeed = Present_Data_Speed[Data_Stage-1]; //设置返回速度[4]
 					}			
-					else if(Data_Stage == 5)  //回原点结束了
-					{
-						Status_Motion = STATUS_REST; //运动状态改为停止	
-						Data_Stage = 0; 	//自动模式的段数改为0段
-						Status_Return = 0;  //返回状态灯灭
-					}
+//					else if(Data_Stage == 5)  //回原点结束了
+//					{
+//						Status_Motion = STATUS_REST; //运动状态改为停止	
+//						Data_Stage = 0; 	//自动模式的段数改为0段
+//						Status_Return = 0;  //返回状态灯灭
+//					}
 				}
 			}			
 		}		

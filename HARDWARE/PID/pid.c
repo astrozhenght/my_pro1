@@ -13,7 +13,7 @@ float SUM_Err = 0.0f;
 void PID_Init(void)
 {
 	P = 6.0f;  	//回复力
-	I = 4.0f;   //静态误差
+	I = 4.0f;   //消静差
 	D = 6.0f;   //阻尼力
 }
 

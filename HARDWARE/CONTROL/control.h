@@ -16,7 +16,7 @@ extern vu8   Flag_Init;
 #define STATUS_REST       		0  //静止状态
 #define STATUS_ONESTEP   		1  //复位第一步状态
 #define STATUS_TWOSTEP   		2  //复位第二步状态
-#define STATUS_THREESTEP   		3  //复位第三步状态
+//#define STATUS_THREESTEP   		3  //复位第三步状态
 #define STATUS_AUTOMOD   		4  //自动状态
 #define STATUS_SINGMOD   		5  //单步状态
 
