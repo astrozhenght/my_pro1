@@ -3,22 +3,22 @@
 #include "sys.h"
 
 extern vu8   TIM5_Count;
-extern u8    Motor_Dir;
+extern u8    Motor_Dir; 	//电机方向
 extern float EXP_LOC;
 
-extern vu8   Flag_Status_Motion;	
+extern vu8   Status_Motion;	
 extern vu8   Flag_Init;
 
 #define DOING       			0  //上电复位状态
 #define DONE       				1  //上电复位完成状态
 
-//电机复位状态
-#define STATUS_REST       		0  //电机处在静止状态
-#define STATUS_ONESTEP   		1  //复位第一步进行中
-#define STATUS_TWOSTEP   		2  //复位第二步进行中
-#define STATUS_THREESTEP   		3  //复位第三步进行中
-#define STATUS_AUTOMOD   		4  //自动进行中
-#define STATUS_SINGMOD   		5  //单步进行中
+//系统状态
+#define STATUS_REST       		0  //静止状态
+#define STATUS_ONESTEP   		1  //复位第一步状态
+#define STATUS_TWOSTEP   		2  //复位第二步状态
+#define STATUS_THREESTEP   		3  //复位第三步状态
+#define STATUS_AUTOMOD   		4  //自动状态
+#define STATUS_SINGMOD   		5  //单步状态
 
 #define MODE_SELECT        		1  //模式选择
 #define MODE_AUTO       		2  //自动模式

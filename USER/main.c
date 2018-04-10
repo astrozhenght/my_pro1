@@ -20,7 +20,7 @@ int main(void)
 	
 	USART_init(19200); //串口1初始化
 	RS485_Init(19200);
-	PID_Init();    //位置式PID参数初始化
+	PID_Init();    	 //位置式PID参数初始化
 
 	delay_ms(1000);  //等待变频器初始化完成
 	delay_ms(1000);

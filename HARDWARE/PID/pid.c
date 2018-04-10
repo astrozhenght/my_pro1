@@ -78,20 +78,20 @@ void PID_Control_SPD(float position, float speed)
 				
 	if(Data_Location > (position+0.02f))
 	{
-		Motor_Dir = DIR_LEFT;  //电机左转
+		Motor_Dir = DIR_LEFT;  //电机方向改为左转
 	}
 	else if(Data_Location < (position-0.03f))
 	{
-		Motor_Dir = DIR_RIGHT; //电机右转
+		Motor_Dir = DIR_RIGHT; //电机方向改为右转
 	}
 	else //到了目标点，开启定时器，进入中断后判断状态是否是停止
 	{	
-		if(Motor_Dir != DIR_STOP)  //等于停止的时候进入一次！！！
+		if(Motor_Dir != DIR_STOP)  //电机方向等于停止的时候进入
 		{
 			TIM5_Count = 2;	  //400ms后
 			TIM5->CNT = 0;    //向上计数，计数器值归零
 			TIM_Cmd(TIM5, ENABLE); 	//使能定时器5，中断计时		
-			Motor_Dir = DIR_STOP;  	//电机停止转动
+			Motor_Dir = DIR_STOP;  	//电机方向改为停止
 		}			
 	}
 }
