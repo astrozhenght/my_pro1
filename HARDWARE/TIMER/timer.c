@@ -18,9 +18,9 @@ void TIM2_Int_Init(u16 arr,u16 psc)
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;   		 //子优先级0
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
-	
+
 	TIM_ClearITPendingBit(TIM2, TIM_IT_Update); //清除更新中断请求位	
-	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE); 	//允许定时器2更新中断	
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE); 	//允许定时器2更新中断		
 	TIM_Cmd(TIM2, DISABLE); //不使能定时器2
 }
 
