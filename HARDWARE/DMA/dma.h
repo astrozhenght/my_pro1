@@ -10,8 +10,10 @@
 #define LEN_SEND_485   (u16)20
 #define LEN_RECV_485   (u16)20
 
+extern vu8  Receive_485_flag;  //485接收的flag
 
 extern vu32 Receive_byte_num;
+extern vu32 Receive_485_num;   //485接收到的字节个数
 
 extern vu8 Receive_232_flag;
 

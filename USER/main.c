@@ -22,26 +22,29 @@ int main(void)
 	RS485_Init(19200);
 	PID_Init();    	 //位置式PID参数初始化
 
-	delay_ms(1000);  //等待变频器初始化完成
-	delay_ms(1000);
-	delay_ms(1000);
-	delay_ms(1000);
-	delay_ms(1000);
-	delay_ms(1000);	
-	delay_ms(1000);
-	delay_ms(1000);	
+//	delay_ms(1000);  //等待变频器初始化完成
+//	delay_ms(1000);
+//	delay_ms(1000);
+//	delay_ms(1000);
+//	delay_ms(1000);
+//	delay_ms(1000);	
+//	delay_ms(1000);
+//	delay_ms(1000);	
 	
 	TIM4_Encode_Init();
-	TIM2_Int_Init(8400, 300);    //30ms，可开关，发指令到变频器
+	TIM2_Int_Init(8400, 200);    //20ms，可开关，发指令到变频器
 	TIM3_Int_Init(8400, 200);    //20ms，常开，处理位置
 	TIM5_Int_Init(8400, 2000);   //200ms，可开关，延时作用
 		
 	LED_Init();
 	EXTIX_Init();	
-	Modbus_RegMap();	
-	DMA2_232_Config();	     
-	Motor_Restore(); //上电复位回原点
+	Modbus_RegMap();
 	
+	DMA2_232_Config();
+	DMA1_485_Config();	
+	
+	Motor_Restore(); //上电复位回原点
+		
 	while(1)
 	{	
 		if(Receive_232_flag)  	 //232接收到触摸屏数据
@@ -53,6 +56,7 @@ int main(void)
 			Receive_232_flag = 0;
 		}	
 		FreqChg_Control(); //控制定时器，定时结束发指令到变频器
+		Receive_Deal();	   //485接收处理函数	
 	}
 }
 

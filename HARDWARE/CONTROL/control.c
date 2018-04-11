@@ -7,6 +7,7 @@
 #include "time.h"
 #include "delay.h"
 #include "pid.h"
+#include "dma.h"
 
 long  Encoder_Pulse_NUM = 0; //¼ÇÂ¼±àÂëÆ÷Âö³å¸öÊı
 vu8   Flag_Init = DOING; 	 //ÉÏµç¸´Î»±êÖ¾Î»£¬doing±êÖ¾ÕıÔÚÉÏµç¸´Î»£¬done±íÊ¾ÉÏµç¸´Î»Íê³É
@@ -16,8 +17,10 @@ float Last_Speed = 0.0f;     //ÉÏÒ»´ÎµÄËÙ¶ÈÖµ£¬Èç¹ûºÍµ±Ç°µÄËÙ¶È²»ÏàµÈ¾ÍÒª¸Ä±äËÙ¶
 u8    Motor_Dir = DIR_STOP;  //µç»úµ±Ç°·½Ïò£¬Ä¬ÈÏÍ£Ö¹
 u8    Last_Dir = DIR_STOP;   //µç»úÉÏ´ÎµÄ·½Ïò£¬Ä¬ÈÏÍ£Ö¹
 float Location_Left_Limit = 0.0f;   //ÉÏµç¸´Î»Èç¹ûµ½´ï×ó¼«ÏŞ£¬¾Í¼ÇÂ¼×ó¼«ÏŞÎ»ÖÃ
-float Present_Data_Speed[5] = {0};  //¼ÇÂ¼×Ô¶¯Ä£Ê½ÏÂ°´ÏÂÆô¶¯Ê±µÄÎå¸öËÙ¶È£¬ÔË¶¯¹ı³ÌÖĞ¸ü¸ÄËÙ¶ÈÎŞĞ§  
+float Present_Data_Speed[5] = {0};  //¼ÇÂ¼×Ô¶¯Ä£Ê½ÏÂ°´ÏÂÆô¶¯Ê±µÄÎå¸öËÙ¶È£¬ÔË¶¯¹ı³ÌÖĞ¸ü¸ÄËÙ¶ÈÎŞĞ§
 
+vu8   order_type = ORDER_NONE;   //±äÆµÆ÷ÃüÁîÀàĞÍ£¬Ä¬ÈÏÎŞÃüÁî
+vu8   communicate = SEND2;   	 //modbusÖ÷»úÄ¬ÈÏÊÇ·¢ËÍ
 /**
  *×÷ÓÃ£ºÄ£Ê½ÇĞ»»£¬Âß¼­¿ØÖÆ²¿·Ö
 **/
@@ -351,44 +354,44 @@ void Motor_Restore(void)
 		if(GPIO_ReadInputDataBit(GPIOI, LEFT_LIMIT) == Bit_SET)  //Î»ÖÃÔÚ×ó¼«ÏŞ
 		{
 			Data_RunSpeed = 15.0f;  //ËÙ¶È15mm/s
-			Motor_Dir = DIR_RIGHT; 	//µç»úÏòÓÒ×ª¶¯
-			Status_Motion = STATUS_TWOSTEP; //±íÊ¾µ±Ç°ÕıÔÚ¸´Î»µÄµÚ¶ş²½
+			Motor_Dir = DIR_RIGHT; 	//µç»ú·½Ïò¸ÄÎªÓÒ×ª
+			Status_Motion = STATUS_TWOSTEP; //ÔË¶¯×´Ì¬Îª¸´Î»µÚ¶ş²½×´Ì¬
 		}
 		else  //³ıÁË×ó¼«ÏŞµÄÆäËûÎ»ÖÃ
 		{
 			if(Data_Location <= -10.0f)  //Î»ÖÃĞ¡ÓÚ-10mm
 			{
-				Motor_Dir = DIR_RIGHT; 			//µç»úÏòÓÒ×ª¶¯
+				Motor_Dir = DIR_RIGHT; 			//µç»ú·½Ïò¸ÄÎªÓÒ×ª
 				Data_RunSpeed = 15.0f;  		//ËÙ¶È15mm/s
-				Status_Motion = STATUS_TWOSTEP; //±íÊ¾µ±Ç°ÕıÔÚ¸´Î»µÄµÚ¶ş²½
+				Status_Motion = STATUS_TWOSTEP; //ÔË¶¯×´Ì¬Îª¸´Î»µÚ¶ş²½×´Ì¬
 			}
 			else if(Data_Location <= -4.0f)
 			{
-				Motor_Dir = DIR_RIGHT; 			//µç»úÏòÓÒ×ª¶¯
-				Data_RunSpeed = 2.0f;  			   //ËÙ¶È2mm/s	
-				Status_Motion = STATUS_TWOSTEP; //±íÊ¾µ±Ç°ÕıÔÚ¸´Î»µÄµÚ¶ş²½
+				Motor_Dir = DIR_RIGHT; 			//µç»ú·½Ïò¸ÄÎªÓÒ×ª
+				Data_RunSpeed = 2.0f;  			//ËÙ¶È2mm/s	
+				Status_Motion = STATUS_TWOSTEP; //ÔË¶¯×´Ì¬Îª¸´Î»µÚ¶ş²½×´Ì¬
 			}
-			else if(((Data_Location<-0.1f) && (Data_Location>-4.0f))) //Õâ¶Î¾àÀë³öÈ¥£¬¶¨Ê±·µ»Ø»á¼ì²âµ½ÉÏÉıÑØ
+			else if(((Data_Location<-0.1f) && (Data_Location>-4.0f))) //Õâ¶Î¾àÀë¶¨Ê±×óÒÆ£¬·µ»Ø»á¼ì²âµ½ÉÏÉıÑØ
 			{
-				Motor_Dir = DIR_LEFT; 			//µç»úÏò×ó×ª¶¯
+				Motor_Dir = DIR_LEFT; 			//µç»ú·½Ïò¸ÄÎª×ó×ª
 				Data_RunSpeed = 15.0f;  		//ËÙ¶È15mm/s	
-				Status_Motion = STATUS_ONESTEP; //±íÊ¾µ±Ç°ÕıÔÚ¸´Î»µÄµÚÒ»²½
-				TIM5_Count = 5; //¶¨Ê±Æ÷5½«½øÈëx´ÎÖĞ¶Ïºó²Å»á¹Ø±Õ					
-				TIM_Cmd(TIM5, ENABLE); 	//Ê¹ÄÜ¶¨Ê±Æ÷5£¬ÖĞ¶Ï¼ÆÊ±			
+				Status_Motion = STATUS_ONESTEP; //ÔË¶¯×´Ì¬Îª¸´Î»µÚÒ»²½×´Ì¬
+				TIM5_Count = 5; //¶¨Ê±Æ÷5½«½øÈë5´ÎÖĞ¶Ïºó²Å»á¹Ø±Õ					
+				TIM_Cmd(TIM5, ENABLE); 		//Ê¹ÄÜ¶¨Ê±Æ÷5			
 			}
-			else if((Data_Location>0.1f) && (Data_Location<5.0f))  //Õâ¶Î¾àÀë³öÈ¥£¬¶¨Ê±·µ»Ø»á¼ì²âµ½ÉÏÉıÑØ
+			else if((Data_Location>0.1f) && (Data_Location<5.0f))  //Õâ¶Î¾àÀë¶¨Ê±×óÒÆ£¬·µ»Ø»á¼ì²âµ½ÉÏÉıÑØ
 			{
-				Motor_Dir = DIR_LEFT; 			//µç»úÏò×ó×ª¶¯
+				Motor_Dir = DIR_LEFT; 			//µç»ú·½Ïò¸ÄÎª×ó×ª
 				Data_RunSpeed = 15.0f;  		//ËÙ¶È15mm/s			
-				Status_Motion = STATUS_ONESTEP; //±íÊ¾µ±Ç°ÕıÔÚ¸´Î»µÄµÚÒ»²½
+				Status_Motion = STATUS_ONESTEP; //ÔË¶¯×´Ì¬Îª¸´Î»µÚÒ»²½×´Ì¬
 				TIM5_Count = 6; //¶¨Ê±Æ÷5½«½øÈëx´ÎÖĞ¶Ïºó²Å»á¹Ø±Õ					
-				TIM_Cmd(TIM5, ENABLE); 	//Ê¹ÄÜ¶¨Ê±Æ÷5£¬ÖĞ¶Ï¼ÆÊ±
+				TIM_Cmd(TIM5, ENABLE); 	//Ê¹ÄÜ¶¨Ê±Æ÷5
 			}
 			else if(Data_Location >= 5.0f)
 			{
-				Motor_Dir = DIR_LEFT; 			//µç»úÏò×ó×ª¶¯
+				Motor_Dir = DIR_LEFT; 			//µç»ú·½Ïò¸ÄÎª×ó×ª
 				Data_RunSpeed = 15.0f;  		//ËÙ¶È15mm/s
-				Status_Motion = STATUS_ONESTEP; //±íÊ¾µ±Ç°ÕıÔÚ¸´Î»µÄµÚÒ»²½
+				Status_Motion = STATUS_ONESTEP; //ÔË¶¯×´Ì¬Îª¸´Î»µÚÒ»²½×´Ì¬
 			}
 			else  //ÔÚÔ­µãÎ»ÖÃ
 			{
@@ -449,35 +452,103 @@ void TIM2_IRQHandler(void)
 {	
 	if(TIM_GetITStatus(TIM2, TIM_IT_Update)==SET) 	//Òç³öÖĞ¶Ï
 	{
-		if(Last_Dir != Motor_Dir)  //·½Ïò¸Ä±ä
+		//ÏÖÔÚ¿ÉÒÔ·¢Êı¾İ!!!
+		if(communicate == SEND2)
 		{
-			Last_Dir = Motor_Dir;
-			switch(Last_Dir)
+			if(Last_Dir != Motor_Dir)  //·½Ïò¸Ä±ä
 			{
-				case DIR_STOP:
-					Motor_Stop();  //µç»úÍ£Ö¹×ª¶¯	
-					if(Flag_Init == DOING)  //ÕıÔÚÉÏµç¸´Î»
-					{
-						TIM5_Count = 2; 	//200ms*2Ö®ºó½øÈëÖĞ¶Ï£¬Î»ÖÃÇåÁã
-						TIM_Cmd(TIM5, ENABLE); 	//Ê¹ÄÜ¶¨Ê±Æ÷5£¬ÖĞ¶Ï¼ÆÊ±
-					}						
-					break;
-				case DIR_LEFT:
-					Motor_Left();  //µç»ú×ó×ª
-					break;
-				case DIR_RIGHT:
-					Motor_Right(); //µç»úÓÒ×ª
-					break;
+				switch(Motor_Dir)
+				{
+					case DIR_STOP:
+						Motor_Stop();  //µç»úÍ£Ö¹×ª¶¯	
+						if(Flag_Init == DOING)  //ÕıÔÚÉÏµç¸´Î»
+						{
+							TIM5_Count = 2; 	//200ms*2Ö®ºó½øÈëÖĞ¶Ï£¬Î»ÖÃÇåÁã
+							TIM_Cmd(TIM5, ENABLE); 	//Ê¹ÄÜ¶¨Ê±Æ÷5£¬ÖĞ¶Ï¼ÆÊ±
+						}						
+						break;
+					case DIR_LEFT:
+						Motor_Left();  //µç»ú×ó×ª
+						break;
+					case DIR_RIGHT:
+						Motor_Right(); //µç»úÓÒ×ª
+						break;
+				}
 			}
-		}
-		else if(Last_Speed != Data_RunSpeed) //ËÙ¶È¸Ä±ä
-		{	
-			Last_Speed = Data_RunSpeed;
-			//½üËÆÈÏÎªËÙ¶ÈºÍÆµÂÊ³ÊÏßĞÔ¹ØÏµ£¬±ÈÀıÏµÊıÇóµÃÎª4.13
-			FREQ_Change_Freq(Last_Speed * 4.13f); //¸ü¸Ä±äÆµÆ÷µÄÆµÂÊ	
-		}	
+			else if(Last_Speed != Data_RunSpeed) //ËÙ¶È¸Ä±ä
+			{	
+				//½üËÆÈÏÎªËÙ¶ÈºÍÆµÂÊ³ÊÏßĞÔ¹ØÏµ£¬±ÈÀıÏµÊıÇóµÃÎª4.13
+				FREQ_Change_Freq(Data_RunSpeed * 4.13f); //¸ü¸Ä±äÆµÆ÷µÄÆµÂÊ	
+			}	
+			communicate = RECEIVE2; //×ª»»Îª½ÓÊÕ×´Ì¬
+		}			
 		TIM_Cmd(TIM2, DISABLE); //Ê§ÄÜ¶¨Ê±Æ÷2
 		TIM_ClearITPendingBit(TIM2, TIM_IT_Update); 	//Çå³ıÖĞ¶Ï±êÖ¾Î»
+	}
+}
+
+//·¢ËÍÍê³ÉÖ®ºó½øÈë
+void Receive_Deal(void)
+{
+	u8 i;
+	if(communicate == RECEIVE2) //½ÓÊÕ×´Ì¬
+	{
+		for(i = 0; i < 3; i++)
+		{
+			if(Receive_485_flag == 1)  //485½ÓÊÕµ½Êı¾İ
+			{
+//				Modbus2_Parse(); //´¦Àí±äÆµÆ÷·µ»ØµÄÊı¾İ
+				break; //Ìø³öÑ­»·
+			}
+			else if(Receive_485_flag == 0)//485Î´½ÓÊÕµ½»Ø¸´Êı¾İ£¬ÖØ·¢
+			{
+				if(Last_Dir != Motor_Dir)  //·½Ïò¸Ä±ä
+				{
+					switch(Motor_Dir)
+					{
+						case DIR_STOP:
+							Motor_Stop();  //µç»úÍ£Ö¹×ª¶¯						
+							break;
+						case DIR_LEFT:
+							Motor_Left();  //µç»ú×ó×ª
+							break;
+						case DIR_RIGHT:
+							Motor_Right(); //µç»úÓÒ×ª
+							break;
+					}
+				}
+				else if(Last_Speed != Data_RunSpeed) //ËÙ¶È¸Ä±ä
+				{	
+					FREQ_Change_Freq(Data_RunSpeed * 4.13f); //¸ü¸Ä±äÆµÆ÷µÄÆµÂÊ	
+				}
+				delay_ms(20); //ÖØ·¢Ö®ºóÑÓÊ±20ms				
+			}
+		}
+		if(i == 3) //µÚÈı´ÎÖØ·¢
+		{
+			if(Receive_485_flag == 1)  //485½ÓÊÕµ½Êı¾İ
+			{
+				LED_Toggle(LED3);
+//				Modbus2_Parse(); //´¦Àí±äÆµÆ÷·µ»ØµÄÊı¾İ
+			}
+			else 
+			{
+				//±¨´í£¡£¡£¡£¡
+				LED_Toggle(LED1);
+			}	
+		}
+		
+		//Çå³ıÊı¾İ£¡£¡£¡£¡
+		if(Last_Dir != Motor_Dir) 
+		{
+			Last_Dir = Motor_Dir; //²»»áÖØ·¢£¬Í¨ĞÅÍê³É
+		}
+		else if(Last_Speed != Data_RunSpeed)
+		{
+			Last_Speed = Data_RunSpeed;
+		}
+		communicate = SEND2;	 //¿ÉÒÔ·¢ËÍÖ¸Áî			
+		Receive_485_flag = 0;	 //Çå³ı½ÓÊÕ±êÖ¾Î»	
 	}
 }
 

@@ -11,6 +11,9 @@
 vu32 Receive_byte_num = 0;  //232接收到的字节个数
 vu8  Receive_232_flag = 0;
 
+vu32 Receive_485_num = 0;   //485接收到的字节个数
+vu8  Receive_485_flag = 0;
+
 u8 SendBuff_232[LEN_SEND_232] = {0};	//发送数据缓冲区
 u8 ReceBuff_232[LEN_RECV_232] = {0};	//接收数据缓冲区
 
@@ -110,7 +113,7 @@ void DMA2_232_Send(u16 size)
 {
 	DMA_Cmd(DMA2_Stream7, DISABLE);                      //关闭DMA传输 	
 	while(DMA_GetCmdStatus(DMA2_Stream7) != DISABLE){}	 //确保DMA可以被设置  	
-	DMA_SetCurrDataCounter(DMA2_Stream7, size);      //设置数据传输量   
+	DMA_SetCurrDataCounter(DMA2_Stream7, size);      	 //设置数据传输量   
 	DMA_Cmd(DMA2_Stream7, ENABLE);                       //开启DMA传输 
 }	  	
 
@@ -234,8 +237,6 @@ void DMA1_485_Config(void)
 	DMA_Cmd(DMA1_Stream5, DISABLE); //关闭DMA后，下面这个函数才有用
 	DMA_SetCurrDataCounter(DMA1_Stream5, LEN_RECV_485); //设置下次要接收的数据字节数 
 	DMA_Cmd(DMA1_Stream5, ENABLE);  //打开DMA
-
-	RS485_TX_EN = RECEIVE;						//设置为接收模式	
 } 
 
 /**
@@ -243,17 +244,13 @@ void DMA1_485_Config(void)
 **/
 void DMA1_485_Send(u16 size)
 {
-	RS485_TX_EN = SEND;								//设置为发送模式	
-	delay_ms(2);  //等待
+	RS485_TX_EN = SEND;		//设置为发送模式	
+	RS485_RX_EN = SEND;
 	
 	DMA_Cmd(DMA1_Stream6, DISABLE);                      //关闭DMA传输 	
 	while(DMA_GetCmdStatus(DMA1_Stream6) != DISABLE){}	 //确保DMA可以被设置  	
 	DMA_SetCurrDataCounter(DMA1_Stream6, size);       	 //设置数据传输量   
 	DMA_Cmd(DMA1_Stream6, ENABLE);                       //开启DMA传输
-
-	delay_ms(2);  //等待
-	RS485_TX_EN = RECEIVE;						//设置为接收模式		
-	delay_ms(2);
 }	
 
 /**
@@ -266,6 +263,11 @@ void DMA1_Stream6_IRQHandler()
 		//清空数据！！
 		memset(SendBuff_485, 0, LEN_SEND_485);		
 		DMA_ClearFlag(DMA1_Stream6, DMA_FLAG_TCIF6);//清除DMA2_Steam7传输完成标志
+		
+		while(USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET){}; //等待DMA发送完成
+			
+		RS485_TX_EN = RECEIVE;						//设置为接收模式
+		RS485_RX_EN = RECEIVE;
 	}
 }
 
@@ -284,10 +286,13 @@ void USART2_IRQHandler(void)   //串口1中断服务程序
 		DMA_Cmd(DMA1_Stream5, DISABLE); //关闭DMA
 		
 		DMA_ClearFlag(DMA1_Stream5, DMA_FLAG_TCIF5); //清除DMA标志位
-		temp = LEN_RECV_485 - DMA_GetCurrDataCounter(DMA1_Stream5);  //得到接收数据的个数		 
+		Receive_485_num = LEN_RECV_485 - DMA_GetCurrDataCounter(DMA1_Stream5);  //得到接收数据的个数		 
 		DMA_SetCurrDataCounter(DMA1_Stream5, LEN_RECV_485);  //设置下次要接收的数据字节数  
 
-		//数据处理		
+		//数据处理	
+		Receive_485_flag = 1; //485接收完成标志位置1
+		LED_Toggle(LED2);
+		
 		DMA_Cmd(DMA1_Stream5, ENABLE);  //打开DMA
 		USART_ClearFlag(USART2, USART_FLAG_IDLE); //清除空闲中断		
 	} 

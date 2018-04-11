@@ -36,7 +36,7 @@ void RS485_Init(u32 bound)
 	GPIO_Init(GPIOA, &GPIO_InitStructure); 	//初始化PA2，PA3
 	
 	//PH13推挽输出，485模式控制  
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13; 	//GPIOH13
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13|GPIO_Pin_14; 	//GPIOH13
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;	//输出
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;	//速度100MHz
 	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP; //推挽输出
@@ -54,8 +54,6 @@ void RS485_Init(u32 bound)
 	
     USART_Cmd(USART2, ENABLE);  //使能串口 2	
 	USART_ClearFlag(USART2, USART_FLAG_TC);	
-	
-	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);//开启接收中断
 	USART_ITConfig(USART2, USART_IT_IDLE, ENABLE);//开启空闲中断
 
 	//Usart2 NVIC 配置
@@ -66,22 +64,8 @@ void RS485_Init(u32 bound)
 	NVIC_Init(&NVIC_InitStructure);	//根据指定的参数初始化VIC寄存器、
 	
 	RS485_TX_EN = RECEIVE;	//默认为接收模式	
+	RS485_RX_EN = RECEIVE;	//默认为接收模式	
 }
 
-/**
- *作用：RS485发送字符数组
- *形参：buf发送区首地址
-**/
-void RS485_Send_Data(u8 *buf, u8 len)
-{
-	u8 t;  					//len是字符串长度
-	RS485_TX_EN = SEND;		//设置为发送模式	
-	for(t = 0; t < len; t++)	//循环发送数据
-	{
-	  while(USART_GetFlagStatus(USART2, USART_FLAG_TC)==RESET){}; //等待发送结束		
-	  USART_SendData(USART2, buf[t]); 
-	}	 
-	while(USART_GetFlagStatus(USART2,USART_FLAG_TC)==RESET); 	//等待发送结束
-	
-	RS485_TX_EN = RECEIVE;	 //设置为接收模式	
-}
+
+
