@@ -32,7 +32,7 @@ int main(void)
 //	delay_ms(1000);	
 	
 	TIM4_Encode_Init();
-	TIM2_Int_Init(8400, 200);    //20ms，可开关，发指令到变频器
+	TIM2_Int_Init(8400, 300);    //30ms，可开关，发指令到变频器
 	TIM3_Int_Init(8400, 200);    //20ms，常开，处理位置
 	TIM5_Int_Init(8400, 2000);   //200ms，可开关，延时作用
 		
@@ -44,7 +44,9 @@ int main(void)
 	DMA1_485_Config();	
 	
 	Motor_Restore(); //上电复位回原点
-		
+//	Last_Speed = 10.0f;
+//	Motor_Dir = DIR_LEFT;//测试重发
+	
 	while(1)
 	{	
 		if(Receive_232_flag)  	 //232接收到触摸屏数据
@@ -56,7 +58,7 @@ int main(void)
 			Receive_232_flag = 0;
 		}	
 		FreqChg_Control(); //控制定时器，定时结束发指令到变频器
-		Receive_Deal();	   //485接收处理函数	
+//		FreqRev_Deal();	   //485接收处理函数	
 	}
 }
 

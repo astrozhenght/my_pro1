@@ -36,6 +36,7 @@ extern float Data_RunSpeed; 	//运行速度
 extern u16   Button_Left;     //左运动按钮 
 extern u16   Button_Right;    //右运动按钮 
 extern int   Data_Animation;  //动画位置
+extern u16   Data_Error;     	  //错误码
 
 void Modbus_Parse(void);
 

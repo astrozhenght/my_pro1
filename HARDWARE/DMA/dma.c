@@ -261,7 +261,7 @@ void DMA1_Stream6_IRQHandler()
 	if(DMA_GetITStatus(DMA1_Stream6, DMA_IT_TCIF6) == SET)
 	{
 		//清空数据！！
-		memset(SendBuff_485, 0, LEN_SEND_485);		
+//		memset(SendBuff_485, 0, LEN_SEND_485);		
 		DMA_ClearFlag(DMA1_Stream6, DMA_FLAG_TCIF6);//清除DMA2_Steam7传输完成标志
 		
 		while(USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET){}; //等待DMA发送完成

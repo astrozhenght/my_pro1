@@ -8,6 +8,7 @@
 #include "delay.h"
 #include "pid.h"
 #include "dma.h"
+#include "string.h"
 
 long  Encoder_Pulse_NUM = 0; //记录编码器脉冲个数
 vu8   Flag_Init = DOING; 	 //上电复位标志位，doing标志正在上电复位，done表示上电复位完成
@@ -100,7 +101,9 @@ void Mode_Control(void)
 						Present_Data_Speed[2] = Data_Speed3;  //记录当前输入的三段速度，运动过程中更改速度无效				
 						Present_Data_Speed[3] = Data_Speed4;  //记录当前输入的四段速度，运动过程中更改速度无效
 						Present_Data_Speed[4] = Data_BKSpeed; //记录当前输入的返回速度，运动过程中更改速度无效
-						Data_Stage = 1;  //当前段数为第一段						
+						Data_Stage = 1;  //当前段数为第一段	
+						Motor_Dir = DIR_RIGHT; //电机向右运动
+						Data_RunSpeed = Present_Data_Speed[0];//初始速度
 						Status_Motion = STATUS_AUTOMOD;  //标志当前运动状态为自动运动状态
 					}
 				}	
@@ -136,6 +139,8 @@ void Mode_Control(void)
 				{
 					if((Data_Location>=-0.1f) && (Data_Location<=0.1f)) //工作台在原点
 					{
+						Motor_Dir = DIR_RIGHT; //电机向右转动
+						Data_RunSpeed = Data_Speed;
 						Status_Motion = STATUS_SINGMOD; //当前状态为单步状态
 					}
 					else  //第一步不在原点
@@ -143,10 +148,19 @@ void Mode_Control(void)
 						Data_Stage = 0;  //段数归0
 					}
 				}
-				else if(Data_Stage <= 5) //五段之内
+				else if(Data_Stage <= 4) //四段之内
 				{
+					Motor_Dir = DIR_RIGHT; //电机向右转动
+					Data_RunSpeed = Data_Speed;
 					Status_Motion = STATUS_SINGMOD; //当前状态为单步状态
 				}	
+				else if(Data_Stage == 5)
+				{
+					Status_Return = 1;
+					Motor_Dir = DIR_LEFT; //电机向左转动
+					Data_RunSpeed = Data_BKSpeed;   //设置返回速度
+					Status_Motion = STATUS_ONESTEP; //当前状态为单步状态
+				}
 			}	
 			Button_Start = 0;			
 		}		
@@ -288,9 +302,42 @@ void Mode_Control(void)
 **/
 void FreqChg_Control(void)
 {
-	if((Motor_Dir!=Last_Dir) || (Data_RunSpeed!=Last_Speed)) //电机方向改变或者速度改变
+	//给变频器发指令
+	if(communicate == SEND2)
 	{
-		TIM_Cmd(TIM2, ENABLE); 	//使能定时器2
+		if(Last_Dir != Motor_Dir)  //方向改变
+		{
+			__disable_irq() ; //关闭总中断
+			switch(Motor_Dir)
+			{
+				case DIR_STOP:
+					Motor_Stop();  //电机停止转动	
+					if(Flag_Init == DOING)  //正在上电复位
+					{
+						TIM5_Count = 2; 	//200ms*2之后进入中断，位置清零
+						TIM_Cmd(TIM5, ENABLE); 	//使能定时器5，中断计时
+					}						
+					break;
+				case DIR_LEFT:
+					Motor_Left();  //电机左转
+					break;
+				case DIR_RIGHT:
+					Motor_Right(); //电机右转
+					break;
+			}
+			communicate = WAITING; //等待30ms
+			TIM_Cmd(TIM2, ENABLE); //使能定时器2
+			__enable_irq() ; //打开总中断
+		}
+		else if(Last_Speed != Data_RunSpeed) //速度改变
+		{	
+			__disable_irq() ; //关闭总中断 
+			//近似认为速度和频率呈线性关系，比例系数求得为4.13
+			FREQ_Change_Freq(Data_RunSpeed * 4.13f); //更改变频器的频率
+			communicate = WAITING; //等待30ms			
+			TIM_Cmd(TIM2, ENABLE); //使能定时器2
+			__enable_irq() ; //打开总中断
+		}	
 	}
 }
 
@@ -451,44 +498,24 @@ void EXTI9_5_IRQHandler(void)
 void TIM2_IRQHandler(void)
 {	
 	if(TIM_GetITStatus(TIM2, TIM_IT_Update)==SET) 	//溢出中断
-	{
-		//现在可以发数据!!!
-		if(communicate == SEND2)
+	{	
+		if(Last_Dir != Motor_Dir) 
 		{
-			if(Last_Dir != Motor_Dir)  //方向改变
-			{
-				switch(Motor_Dir)
-				{
-					case DIR_STOP:
-						Motor_Stop();  //电机停止转动	
-						if(Flag_Init == DOING)  //正在上电复位
-						{
-							TIM5_Count = 2; 	//200ms*2之后进入中断，位置清零
-							TIM_Cmd(TIM5, ENABLE); 	//使能定时器5，中断计时
-						}						
-						break;
-					case DIR_LEFT:
-						Motor_Left();  //电机左转
-						break;
-					case DIR_RIGHT:
-						Motor_Right(); //电机右转
-						break;
-				}
-			}
-			else if(Last_Speed != Data_RunSpeed) //速度改变
-			{	
-				//近似认为速度和频率呈线性关系，比例系数求得为4.13
-				FREQ_Change_Freq(Data_RunSpeed * 4.13f); //更改变频器的频率	
-			}	
-			communicate = RECEIVE2; //转换为接收状态
-		}			
+			Last_Dir = Motor_Dir; //不会重发，通信完成
+		}
+		else if(Last_Speed != Data_RunSpeed)
+		{
+			Last_Speed = Data_RunSpeed;
+		}
+		communicate = SEND2;	 //可以发送指令
+//		communicate = RECEIVE2; //转换为接收状态
 		TIM_Cmd(TIM2, DISABLE); //失能定时器2
 		TIM_ClearITPendingBit(TIM2, TIM_IT_Update); 	//清除中断标志位
 	}
 }
 
 //发送完成之后进入
-void Receive_Deal(void)
+void FreqRev_Deal(void)
 {
 	u8 i;
 	if(communicate == RECEIVE2) //接收状态
@@ -497,7 +524,10 @@ void Receive_Deal(void)
 		{
 			if(Receive_485_flag == 1)  //485接收到数据
 			{
-//				Modbus2_Parse(); //处理变频器返回的数据
+				Modbus2_Parse(); //处理变频器返回的数据
+				//清空数据
+				memset(SendBuff_485, 0, LEN_SEND_485);
+				memset(ReceBuff_485, 0, LEN_RECV_485);
 				break; //跳出循环
 			}
 			else if(Receive_485_flag == 0)//485未接收到回复数据，重发
@@ -521,20 +551,23 @@ void Receive_Deal(void)
 				{	
 					FREQ_Change_Freq(Data_RunSpeed * 4.13f); //更改变频器的频率	
 				}
-				delay_ms(20); //重发之后延时20ms				
+				delay_ms(25); //重发之后延时25ms				
 			}
 		}
 		if(i == 3) //第三次重发
 		{
 			if(Receive_485_flag == 1)  //485接收到数据
 			{
-				LED_Toggle(LED3);
-//				Modbus2_Parse(); //处理变频器返回的数据
+				Modbus2_Parse(); //处理变频器返回的数据
+				//清空数据
+				memset(SendBuff_485, 0, LEN_SEND_485);
+				memset(ReceBuff_485, 0, LEN_RECV_485);
 			}
 			else 
 			{
 				//报错！！！！
-				LED_Toggle(LED1);
+				Data_Error = 5;   //回路不畅
+				Status_Alarm = 0; //通信报错
 			}	
 		}
 		
@@ -560,7 +593,7 @@ void TIM3_IRQHandler(void)
 		TIM4->CNT = 0;  //TIM4计数器的值归0
 		
 		//换算得到速度值：Increment*2.5mm/1024脉冲/20ms
-		if(Increment == 0 || Increment < 512)
+		if(Increment < 1024)
 		{
 			Data_RTSpeed = -1.0f * Increment * 2.5f / 2048.0f / 0.02f;  //反转
 			Encoder_Pulse_NUM -= Increment;
@@ -579,12 +612,25 @@ void TIM3_IRQHandler(void)
 			{			
 				if(Encoder_Pulse_NUM >= 32768 * Data_Stage)  //运动超过了40mm，换速
 				{
-					Data_Stage++;  	 //段数加1，最多加到4						
+					Data_Stage++;  	 //段数加1，最多加到4
+					Data_RunSpeed = Present_Data_Speed[Data_Stage-1]; //段数为1时取Present_Data_Speed[0]作为当前段速					
 				}
 			}		
-			if(Data_Stage <= 4) //段数为1时取Present_Data_Speed[0]作为当前段速
+			if(Data_Stage == 4)  //第四段运行中
 			{
-				PID_Control_SPD(160.03f, Present_Data_Speed[Data_Stage-1]); //PID控制			
+				if(Encoder_Pulse_NUM >= (32768 * 3 + 32700))  //超过指定位置
+				{
+					Data_Stage++; 
+					Status_Wait = 1;		//等待指示灯亮
+					Motor_Dir = DIR_STOP; 	//电机停止转动			
+					TIM5_Count = 15; 		//定时器5将进入15次中断，即3s钟
+					TIM_Cmd(TIM5, ENABLE); 	//使能定时器5
+				}
+				else if(Encoder_Pulse_NUM >= (32768 * 3 + 26624))  //运动到160mm前三圈，换速
+				{
+					Data_RunSpeed = 2.0f; //低速前进
+				}	
+//				PID_Control_SPD(160.03f, Present_Data_Speed[Data_Stage-1]); //PID控制			
 			}		
 //			else if(Data_Stage == 5)  //回原点
 //			{
@@ -620,15 +666,24 @@ void TIM3_IRQHandler(void)
 		{
 			if(Data_Stage <= 4)  //段数小于等于4
 			{
-				PID_Control_SPD(Data_Stage*40.0f+0.03f, Data_Speed); //PID控制				
+				if(Encoder_Pulse_NUM >= (32768 * (Data_Stage-1) + 32700))  //超过指定位置
+				{
+					Motor_Dir = DIR_STOP; 	//电机停止转动
+					Status_Motion = STATUS_REST;					
+				}
+				else if(Encoder_Pulse_NUM >= (32768 * (Data_Stage-1) + 26624))  //运动到160mm前三圈，换速
+				{
+					Data_RunSpeed = 2.0f; //低速前进
+				}
+//				PID_Control_SPD(Data_Stage*40.0f+0.03f, Data_Speed); //PID控制				
 			}
-			else if(Data_Stage == 5)
-			{
-				Motor_Dir = DIR_LEFT; 			//电机向左转动
-				Status_Motion = STATUS_ONESTEP; //回原点转为复位操作
-				Data_RunSpeed = Data_BKSpeed;   //设置返回速度
-//				PID_Control_SPD(0.03f, Data_BKSpeed); //PID控制								
-			}
+//			else if(Data_Stage == 5)
+//			{
+//				Motor_Dir = DIR_LEFT; 			//电机向左转动
+//				Status_Motion = STATUS_ONESTEP; //回原点转为复位操作
+//				Data_RunSpeed = Data_BKSpeed;   //设置返回速度
+////				PID_Control_SPD(0.03f, Data_BKSpeed); //PID控制								
+//			}
 		}
 	}
 	TIM_ClearITPendingBit(TIM3, TIM_IT_Update); 	    //清除中断标志位
@@ -663,52 +718,60 @@ void TIM5_IRQHandler(void)
 			{
 				Motor_Dir = DIR_STOP; 		//电机方向改为停止
 				Status_Motion = STATUS_REST; //运动状态改为停止				
-				Data_Stage = 0; 	//自动模式的段数改为0段
+				Data_Stage = 0;    //自动模式的段数改为0段
 				Status_Return = 0; //返回状态灯置0				
-			}		
-			if(Motor_Dir == DIR_STOP) //消除抖动，200ms后依然是静止状态
+			}	
+			else if(Status_Motion == STATUS_AUTOMOD)
 			{
-				if(Status_Motion == STATUS_SINGMOD)
-				{
-					Status_Motion = STATUS_REST; //运动状态改为停止
-					if(Data_Stage == 5)
-					{
-						Data_Stage = 0;
-					}
-					Motor_Dir = DIR_STOP;
-				}
-//				else if(Status_Motion == STATUS_THREESTEP)
+				Status_Wait = 0;
+				Status_Return = 1; //返回状态灯置1
+				Motor_Dir = DIR_LEFT; //电机向左转动
+				Status_Motion = STATUS_ONESTEP; //回原点转为复位操作！！			
+				Data_RunSpeed = Present_Data_Speed[Data_Stage-1]; //设置返回速度
+			}				
+//			if(Motor_Dir == DIR_STOP) //消除抖动，200ms后依然是静止状态
+//			{
+//				if(Status_Motion == STATUS_SINGMOD)
 //				{
 //					Status_Motion = STATUS_REST; //运动状态改为停止
-//					Data_Stage = 0; //自动模式的段数改为0段
-//					Status_Return = 0; //返回状态灯灭
-//				}
-				else if(Status_Motion == STATUS_AUTOMOD)
-				{
-					if((Data_Stage==4) && (Status_Wait==0)) //说明需要定时3s
-					{
-						Status_Wait = 1;	//等待指示灯亮
-						TIM_Cmd(TIM5, ENABLE);  //使能定时器5
-						TIM5_Count = 15;   		//3s定时
-					}
-					else if((Data_Stage==4) && (Status_Wait==1))
-					{
-						Status_Wait = 0;	//等待指示灯灭
-						Status_Return = 1;	//返回状态灯亮
-						Data_Stage++; 		//第五段	
-						
-						Motor_Dir = DIR_LEFT; 			//电机向左转动
-						Status_Motion = STATUS_ONESTEP; //回原点转为复位操作
-						Data_RunSpeed = Present_Data_Speed[Data_Stage-1]; //设置返回速度[4]
-					}			
-//					else if(Data_Stage == 5)  //回原点结束了
+//					if(Data_Stage == 5)
 //					{
-//						Status_Motion = STATUS_REST; //运动状态改为停止	
-//						Data_Stage = 0; 	//自动模式的段数改为0段
-//						Status_Return = 0;  //返回状态灯灭
+//						Data_Stage = 0;
 //					}
-				}
-			}			
+//					Motor_Dir = DIR_STOP;
+//				}
+////				else if(Status_Motion == STATUS_THREESTEP)
+////				{
+////					Status_Motion = STATUS_REST; //运动状态改为停止
+////					Data_Stage = 0; //自动模式的段数改为0段
+////					Status_Return = 0; //返回状态灯灭
+////				}
+//				else if(Status_Motion == STATUS_AUTOMOD)
+//				{
+//					if((Data_Stage==4) && (Status_Wait==0)) //说明需要定时3s
+//					{
+//						Status_Wait = 1;	//等待指示灯亮
+//						TIM_Cmd(TIM5, ENABLE);  //使能定时器5
+//						TIM5_Count = 15;   		//3s定时
+//					}
+//					else if((Data_Stage==4) && (Status_Wait==1))
+//					{
+//						Status_Wait = 0;	//等待指示灯灭
+//						Status_Return = 1;	//返回状态灯亮
+//						Data_Stage++; 		//第五段	
+//						
+//						Motor_Dir = DIR_LEFT; 			//电机向左转动
+//						Status_Motion = STATUS_ONESTEP; //回原点转为复位操作
+//						Data_RunSpeed = Present_Data_Speed[Data_Stage-1]; //设置返回速度[4]
+//					}			
+////					else if(Data_Stage == 5)  //回原点结束了
+////					{
+////						Status_Motion = STATUS_REST; //运动状态改为停止	
+////						Data_Stage = 0; 	//自动模式的段数改为0段
+////						Status_Return = 0;  //返回状态灯灭
+////					}
+//				}
+//			}			
 		}		
 	}
 	TIM_ClearITPendingBit(TIM5, TIM_IT_Update); 	 //清除中断标志位

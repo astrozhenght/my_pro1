@@ -28,6 +28,7 @@
 
 #define RECEIVE2			    1 
 #define SEND2    				2  
+#define WAITING    				3  
 
 extern vu8   TIM5_Count;
 extern u8    Motor_Dir;    //电机方向
@@ -45,7 +46,7 @@ void Mode_Control(void);
 void Motor_Restore(void);
 
 void FreqChg_Control(void);
-void Receive_Deal(void);  //发送完成之后进入
+void FreqRev_Deal(void);  //发送完成之后进入
 
 
 #endif

@@ -19,7 +19,7 @@ u16   Button_Manual = 0;   //手动模式切换按钮
 u16   Button_Start = 0;    //启动按钮 
 u16   Button_Stop = 0;     //停止按钮 
 u16   Button_BackMain = 0; //返回主界面按钮 
-u16   Status_Alarm = 0;    //警报指示灯
+u16   Status_Alarm = 1;    //警报指示灯
 u16   Status_Pause = 0;    //暂停指示灯
 u16   Status_Return = 0;   //返回指示灯
 u16   Status_Wait = 0;     //等待指示灯
@@ -40,6 +40,7 @@ float Data_RunSpeed = 10.0f;  //运行速度
 u16   Button_Left = 0;        //左运动按钮 
 u16   Button_Right = 0;       //右运动按钮 
 int   Data_Animation = 0;     //动画位置
+u16   Data_Error = 0;     	  //错误码
 
 u16*  Modbus_HoldReg[REG_MAX];  //保持寄存器指针，一个字节
 
@@ -79,13 +80,17 @@ void Modbus_RegMap(void)
 	Modbus_HoldReg[73] = ((u16*)(&Data_Speed4))+0;	
 	Modbus_HoldReg[80] = ((u16*)(&Data_BKSpeed))+1;//返回速度   
 	Modbus_HoldReg[81] = ((u16*)(&Data_BKSpeed))+0;	
-	Modbus_HoldReg[82] = &Data_Stage;  			   //单步段数
-	Modbus_HoldReg[90] = ((u16*)(&Data_Speed))+1;  //单步段速   
+	Modbus_HoldReg[82] = &Data_Stage;  	//单步段数
+	
+	Modbus_HoldReg[90] = ((u16*)(&Data_Speed))+1;    //单步段速   
 	Modbus_HoldReg[91] = ((u16*)(&Data_Speed))+0;	
 	Modbus_HoldReg[92] = ((u16*)(&Data_Animation))+1;//动画位置   
-	Modbus_HoldReg[93] = ((u16*)(&Data_Animation))+0;	
+	Modbus_HoldReg[93] = ((u16*)(&Data_Animation))+0;
+	
 	Modbus_HoldReg[100] = ((u16*)(&Data_RunSpeed))+1;//运行速度   
 	Modbus_HoldReg[101] = ((u16*)(&Data_RunSpeed))+0;		
+	Modbus_HoldReg[102] = &Data_Error;	 //错误码  
+	
 	Modbus_HoldReg[200] = &Present_Mode;   //表示当前模式
 }
 

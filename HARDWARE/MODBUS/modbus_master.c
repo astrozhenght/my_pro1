@@ -28,8 +28,7 @@ void FREQ_Change_Freq(float val)
 	//计算CRC校验码
 	crc = CRC16(SendBuff_485, 6);
 	SendBuff_485[6] = (u8)(crc&0xFF);   //CRC的低字节
-	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节
-	
+	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节	
 	DMA1_485_Send(8);
 }
 
@@ -49,8 +48,7 @@ void Motor_Right(void)
 	//计算CRC校验码
 	crc = CRC16(SendBuff_485, 6);
 	SendBuff_485[6] = (u8)(crc&0xFF);   //CRC的低字节
-	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节
-	
+	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节	
 	DMA1_485_Send(8);
 }
 
@@ -70,8 +68,7 @@ void Motor_Left(void)
 	//计算CRC校验码
 	crc = CRC16(SendBuff_485, 6);
 	SendBuff_485[6] = (u8)(crc&0xFF);   //CRC的低字节
-	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节
-	
+	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节	
 	DMA1_485_Send(8);
 }
 
@@ -91,10 +88,10 @@ void Motor_Stop(void)
 	//计算CRC校验码
 	crc = CRC16(SendBuff_485, 6);
 	SendBuff_485[6] = (u8)(crc&0xFF);   //CRC的低字节
-	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节
-	
+	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节	
 	DMA1_485_Send(8);
 }
+
 
 /**  
  *作用：PLC与变频器传输数据使用了Modbus协议，PLC作为主机会回复触摸屏
@@ -111,10 +108,8 @@ void Modbus2_Parse(void)
 			if(REG_Start_Addr2 < REG_MAX) 	//寄存器地址在范围内
 			{
 				crc = CRC16(ReceBuff_485, Receive_485_num - 2);  //计算接收数据的CRC
-				
 				recv_crc = ((u16)(ReceBuff_485[Receive_485_num-1])<<8) |  \
 								  ReceBuff_485[Receive_485_num-2];  //整合接收到的CRC
-				
 				if(crc == recv_crc)  //CRC校验正确
 				{
 					switch(ReceBuff_485[1])
@@ -130,29 +125,26 @@ void Modbus2_Parse(void)
 							break;
 					}					
 				}
-				else  //CRC校验错误
+				else  //非法数据值
 				{
-//					SendBuff_232[0] = ReceBuff_232[0];
-//					SendBuff_232[1] = ReceBuff_232[1]|0x80;
-//					SendBuff_232[2] = 0x03;  //数据内容错误
-//					DMA2_232_Send(3);
+					Data_Error = 3;   //非法数据值
+					Status_Alarm = 0; //通信报错
 				}
 			}
-			else  //域数据首地址错误
+			else  //非法数据地址
 			{
-//				SendBuff_232[0] = ReceBuff_232[0];
-//				SendBuff_232[1] = ReceBuff_232[1]|0x80;
-//				SendBuff_232[2] = 0x02;
-//				DMA2_232_Send(3);
+				Data_Error = 2;   //非法数据地址
+				Status_Alarm = 0; //通信报错
 			}		
 		}
-		else //功能码错误
+		else if(ReceBuff_485[1]==0x83 || ReceBuff_485[1]==0x86 || ReceBuff_485[1]==0x88)
 		{
-//			SendBuff_232[0] = ReceBuff_232[0];
-//			SendBuff_232[1] = ReceBuff_232[1]|0x80;
-//			SendBuff_232[2] = 0x01;
-//			DMA2_232_Send(3);
-		} 
+			Data_Error = ReceBuff_485[2];   //取出错误码
+		}
+		else
+		{
+			Data_Error = 1; //功能码错误
+		}	
 	}
 }
 
@@ -167,6 +159,7 @@ void Modbus2_03_Solve(void)
 	reg_num = ((u16)ReceBuff_485[2]) % 2;   //获取寄存器数量
 	if(REG_Start_Addr2 + reg_num < REG_MAX)  //寄存器地址+数量在范围内
 	{
+		Status_Alarm = 1; //通信正常
 //		SendBuff_232[0] = ReceBuff_232[0];
 //		SendBuff_232[1] = ReceBuff_232[1];
 //		SendBuff_232[2] = reg_num * 2;  //读取字节数		
@@ -182,12 +175,10 @@ void Modbus2_03_Solve(void)
 //		SendBuff_232[reg_num*2+4] = (u8)(crc>>8)&0xFF;//CRC的高字节
 //		DMA2_232_Send(reg_num*2+5);  //DMA发送
 	}
-	else  //数量超出范围
+	else  //非法数据地址
 	{
-//		SendBuff_232[0] = ReceBuff_232[0];
-//		SendBuff_232[1] = ReceBuff_232[1]|0x80;
-//		SendBuff_232[2] = 0x02;
-//		DMA2_232_Send(3);
+		Data_Error = 2; //非法数据地址
+		Status_Alarm = 0; //通信报错
 	}
 }
 
@@ -196,20 +187,16 @@ void Modbus2_03_Solve(void)
 **/ 
 void Modbus2_06_Solve(void)
 {
-	int i;
-//	u16 crc;
-//	
-//	SendBuff_232[0] = ReceBuff_232[0];
-//	SendBuff_232[1] = ReceBuff_232[1];
-//	SendBuff_232[2] = ReceBuff_232[2];  	
-//	SendBuff_232[3] = ReceBuff_232[3];  	
-//	SendBuff_232[4] = ReceBuff_232[4];  	
-//	SendBuff_232[5] = ReceBuff_232[5];
-	
+	int i;	
 	i = strcmp((const char *)SendBuff_485, (const char *)ReceBuff_485);
 	if(i == 0) //PLC发送和变频器回复一致
 	{
-		
+		Status_Alarm = 1; //通信正常
+	}
+	else  //非法数据值
+	{
+		Data_Error = 3;   //非法数据值
+		Status_Alarm = 0; //通信报错
 	}
 }
 
@@ -218,20 +205,16 @@ void Modbus2_06_Solve(void)
 **/ 
 void Modbus2_08_Solve(void)
 {
-	int i;
-//	u16 crc;
-//	
-//	SendBuff_232[0] = ReceBuff_232[0];
-//	SendBuff_232[1] = ReceBuff_232[1];
-//	SendBuff_232[2] = ReceBuff_232[2];  	
-//	SendBuff_232[3] = ReceBuff_232[3];  	
-//	SendBuff_232[4] = ReceBuff_232[4];  	
-//	SendBuff_232[5] = ReceBuff_232[5];
-	
+	int i;	
 	i = strcmp((const char *)SendBuff_485, (const char *)ReceBuff_485);
 	if(i == 0) //PLC发送和变频器回复一致
 	{
-		
+		Status_Alarm = 1; //通信正常
+	}
+	else 
+	{
+		Data_Error = 3;   //非法数据值
+		Status_Alarm = 0; //通信报错
 	}
 }
 
