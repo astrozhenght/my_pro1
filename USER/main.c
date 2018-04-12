@@ -58,7 +58,7 @@ int main(void)
 			Receive_232_flag = 0;
 		}	
 		FreqChg_Control(); //控制定时器，定时结束发指令到变频器
-//		FreqRev_Deal();	   //485接收处理函数	
+		FreqRev_Deal();	   //485接收处理函数	
 	}
 }
 

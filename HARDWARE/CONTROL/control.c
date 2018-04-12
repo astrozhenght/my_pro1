@@ -307,7 +307,7 @@ void FreqChg_Control(void)
 	{
 		if(Last_Dir != Motor_Dir)  //方向改变
 		{
-			__disable_irq() ; //关闭总中断
+//			__disable_irq() ; //关闭总中断
 			switch(Motor_Dir)
 			{
 				case DIR_STOP:
@@ -327,16 +327,16 @@ void FreqChg_Control(void)
 			}
 			communicate = WAITING; //等待30ms
 			TIM_Cmd(TIM2, ENABLE); //使能定时器2
-			__enable_irq() ; //打开总中断
+//			__enable_irq() ; //打开总中断
 		}
 		else if(Last_Speed != Data_RunSpeed) //速度改变
 		{	
-			__disable_irq() ; //关闭总中断 
+//			__disable_irq() ; //关闭总中断 
 			//近似认为速度和频率呈线性关系，比例系数求得为4.13
 			FREQ_Change_Freq(Data_RunSpeed * 4.13f); //更改变频器的频率
 			communicate = WAITING; //等待30ms			
 			TIM_Cmd(TIM2, ENABLE); //使能定时器2
-			__enable_irq() ; //打开总中断
+//			__enable_irq() ; //打开总中断
 		}	
 	}
 }
@@ -499,17 +499,17 @@ void TIM2_IRQHandler(void)
 {	
 	if(TIM_GetITStatus(TIM2, TIM_IT_Update)==SET) 	//溢出中断
 	{	
-		if(Last_Dir != Motor_Dir) 
-		{
-			Last_Dir = Motor_Dir; //不会重发，通信完成
-		}
-		else if(Last_Speed != Data_RunSpeed)
-		{
-			Last_Speed = Data_RunSpeed;
-		}
-		communicate = SEND2;	 //可以发送指令
-//		communicate = RECEIVE2; //转换为接收状态
-		TIM_Cmd(TIM2, DISABLE); //失能定时器2
+//		if(Last_Dir != Motor_Dir) 
+//		{
+//			Last_Dir = Motor_Dir; //不会重发，通信完成
+//		}
+//		else if(Last_Speed != Data_RunSpeed)
+//		{
+//			Last_Speed = Data_RunSpeed;
+//		}
+//		communicate = SEND2;	 //可以发送指令
+		communicate = RECEIVE2;  //转换为接收状态
+		TIM_Cmd(TIM2, DISABLE);  //失能定时器2
 		TIM_ClearITPendingBit(TIM2, TIM_IT_Update); 	//清除中断标志位
 	}
 }
@@ -528,9 +528,16 @@ void FreqRev_Deal(void)
 				//清空数据
 				memset(SendBuff_485, 0, LEN_SEND_485);
 				memset(ReceBuff_485, 0, LEN_RECV_485);
-				break; //跳出循环
-			}
-			else if(Receive_485_flag == 0)//485未接收到回复数据，重发
+				if(Status_Alarm == 1) //通信成功
+				{
+					break; //跳出循环		
+				}
+				else if(Status_Alarm == 0) //接收数据错误
+				{
+					Receive_485_flag = 0;  //重发
+				}
+			}		
+			if(Receive_485_flag == 0)//485未接收到回复数据，重发
 			{
 				if(Last_Dir != Motor_Dir)  //方向改变
 				{
@@ -565,7 +572,6 @@ void FreqRev_Deal(void)
 			}
 			else 
 			{
-				//报错！！！！
 				Data_Error = 5;   //回路不畅
 				Status_Alarm = 0; //通信报错
 			}	

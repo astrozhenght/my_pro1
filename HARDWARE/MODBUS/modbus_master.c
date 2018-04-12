@@ -140,10 +140,12 @@ void Modbus2_Parse(void)
 		else if(ReceBuff_485[1]==0x83 || ReceBuff_485[1]==0x86 || ReceBuff_485[1]==0x88)
 		{
 			Data_Error = ReceBuff_485[2];   //取出错误码
+			Status_Alarm = 0; //通信报错
 		}
 		else
 		{
 			Data_Error = 1; //功能码错误
+			Status_Alarm = 0; //通信报错
 		}	
 	}
 }
@@ -159,21 +161,12 @@ void Modbus2_03_Solve(void)
 	reg_num = ((u16)ReceBuff_485[2]) % 2;   //获取寄存器数量
 	if(REG_Start_Addr2 + reg_num < REG_MAX)  //寄存器地址+数量在范围内
 	{
-		Status_Alarm = 1; //通信正常
-//		SendBuff_232[0] = ReceBuff_232[0];
-//		SendBuff_232[1] = ReceBuff_232[1];
-//		SendBuff_232[2] = reg_num * 2;  //读取字节数		
-		
+		Status_Alarm = 1; //通信正常		
 //		for(i = 0; i < reg_num; i++)
 //		{
 //			(*Modbus_HoldReg[REG_Start_Addr+i]>>8)&0xFF = ReceBuff_485[3+i*2];	//先发送高字节
 //			*Modbus_HoldReg[REG_Start_Addr+i]&0xFF = ReceBuff_485[4+i*2];  		//后发送低字节			
 //		}
-		
-//		crc = CRC16(SendBuff_232, reg_num*2+3);       //计算CRC
-//		SendBuff_232[reg_num*2+3] = (u8)crc&0xFF;     //CRC的低字节
-//		SendBuff_232[reg_num*2+4] = (u8)(crc>>8)&0xFF;//CRC的高字节
-//		DMA2_232_Send(reg_num*2+5);  //DMA发送
 	}
 	else  //非法数据地址
 	{

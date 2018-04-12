@@ -14,7 +14,7 @@ void TIM2_Int_Init(u16 arr,u16 psc)
 	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseInitStruct);			 //初始化TIM2
 	
 	NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn; 			 //定时器2中断
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;    //抢占优先级0
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;    //抢占优先级0
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;   		 //子优先级0
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
