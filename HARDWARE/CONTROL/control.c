@@ -15,12 +15,11 @@ vu8   Flag_Init = DOING; 	 //上电复位标志位，doing标志正在上电复位，done表示上电
 vu8   Status_Motion = STATUS_REST; //当前为静止状态
 vu8   TIM5_Count = 0; 		 //定时器5的计时次数
 float Last_Speed = 0.0f;     //上一次的速度值，如果和当前的速度不相等就要改变速度
-u8    Motor_Dir = DIR_STOP;  //电机当前方向，默认停止
-u8    Last_Dir = DIR_STOP;   //电机上次的方向，默认停止
+vu8   Motor_Dir = DIR_STOP;  //电机当前方向，默认停止
+vu8   Last_Dir = DIR_STOP;   //电机上次的方向，默认停止
 float Location_Left_Limit = 0.0f;   //上电复位如果到达左极限，就记录左极限位置
 float Present_Data_Speed[5] = {0};  //记录自动模式下按下启动时的五个速度，运动过程中更改速度无效
 
-vu8   order_type = ORDER_NONE;   //变频器命令类型，默认无命令
 vu8   communicate = SEND2;   	 //modbus主机默认是发送
 /**
  *作用：模式切换，逻辑控制部分
@@ -307,7 +306,6 @@ void FreqChg_Control(void)
 	{
 		if(Last_Dir != Motor_Dir)  //方向改变
 		{
-//			__disable_irq() ; //关闭总中断
 			switch(Motor_Dir)
 			{
 				case DIR_STOP:
@@ -327,16 +325,13 @@ void FreqChg_Control(void)
 			}
 			communicate = WAITING; //等待30ms
 			TIM_Cmd(TIM2, ENABLE); //使能定时器2
-//			__enable_irq() ; //打开总中断
 		}
 		else if(Last_Speed != Data_RunSpeed) //速度改变
 		{	
-//			__disable_irq() ; //关闭总中断 
 			//近似认为速度和频率呈线性关系，比例系数求得为4.13
 			FREQ_Change_Freq(Data_RunSpeed * 4.13f); //更改变频器的频率
 			communicate = WAITING; //等待30ms			
 			TIM_Cmd(TIM2, ENABLE); //使能定时器2
-//			__enable_irq() ; //打开总中断
 		}	
 	}
 }
@@ -570,22 +565,24 @@ void FreqRev_Deal(void)
 				memset(SendBuff_485, 0, LEN_SEND_485);
 				memset(ReceBuff_485, 0, LEN_RECV_485);
 			}
-			else 
+			else  //通信失败！！
 			{
+				Last_Speed = Data_RunSpeed;
+				Last_Dir = Motor_Dir;
 				Data_Error = 5;   //回路不畅
 				Status_Alarm = 0; //通信报错
 			}	
 		}
 		
-		//清除数据！！！！
-		if(Last_Dir != Motor_Dir) 
-		{
-			Last_Dir = Motor_Dir; //不会重发，通信完成
-		}
-		else if(Last_Speed != Data_RunSpeed)
-		{
-			Last_Speed = Data_RunSpeed;
-		}
+//		//清除数据！！！！
+//		if(Last_Dir != Motor_Dir) 
+//		{
+//			Last_Dir = Motor_Dir; //不会重发，通信完成
+//		}
+//		else if(Last_Speed != Data_RunSpeed)
+//		{
+//			Last_Speed = Data_RunSpeed;
+//		}
 		communicate = SEND2;	 //可以发送指令			
 		Receive_485_flag = 0;	 //清除接收标志位	
 	}

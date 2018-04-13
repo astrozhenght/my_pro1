@@ -19,7 +19,7 @@ u16   Button_Manual = 0;   //手动模式切换按钮
 u16   Button_Start = 0;    //启动按钮 
 u16   Button_Stop = 0;     //停止按钮 
 u16   Button_BackMain = 0; //返回主界面按钮 
-u16   Status_Alarm = 1;    //警报指示灯
+u16   Status_Alarm = 0;    //警报指示灯
 u16   Status_Pause = 0;    //暂停指示灯
 u16   Status_Return = 0;   //返回指示灯
 u16   Status_Wait = 0;     //等待指示灯
@@ -253,8 +253,7 @@ void Modbus_06_Solve(void)
 	crc = CRC16(SendBuff_232, 6);       //计算CRC
 	SendBuff_232[6] = (u8)crc&0xFF;     	 //CRC的低字节
 	SendBuff_232[7] = (u8)(crc>>8)&0xFF;   //CRC的高字节
-	DMA2_232_Send(8);  //DMA发送，8个字节
-		
+	DMA2_232_Send(8);  //DMA发送，8个字节		
 }
 
 /**  

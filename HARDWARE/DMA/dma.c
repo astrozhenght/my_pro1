@@ -247,10 +247,12 @@ void DMA1_485_Send(u16 size)
 	RS485_TX_EN = SEND;		//设置为发送模式	
 	RS485_RX_EN = SEND;
 	
+//	__disable_irq() ; //关闭总中断	
 	DMA_Cmd(DMA1_Stream6, DISABLE);                      //关闭DMA传输 	
 	while(DMA_GetCmdStatus(DMA1_Stream6) != DISABLE){}	 //确保DMA可以被设置  	
 	DMA_SetCurrDataCounter(DMA1_Stream6, size);       	 //设置数据传输量   
 	DMA_Cmd(DMA1_Stream6, ENABLE);                       //开启DMA传输
+//	__enable_irq() ; //打开总中断
 }	
 
 /**
@@ -291,7 +293,6 @@ void USART2_IRQHandler(void)   //串口1中断服务程序
 
 		//数据处理	
 		Receive_485_flag = 1; //485接收完成标志位置1
-		LED_Toggle(LED2);
 		
 		DMA_Cmd(DMA1_Stream5, ENABLE);  //打开DMA
 		USART_ClearFlag(USART2, USART_FLAG_IDLE); //清除空闲中断		

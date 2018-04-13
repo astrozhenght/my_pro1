@@ -22,14 +22,14 @@ int main(void)
 	RS485_Init(19200);
 	PID_Init();    	 //位置式PID参数初始化
 
-//	delay_ms(1000);  //等待变频器初始化完成
-//	delay_ms(1000);
-//	delay_ms(1000);
-//	delay_ms(1000);
-//	delay_ms(1000);
-//	delay_ms(1000);	
-//	delay_ms(1000);
-//	delay_ms(1000);	
+	delay_ms(1000);  //等待变频器初始化完成
+	delay_ms(1000);
+	delay_ms(1000);
+	delay_ms(1000);
+	delay_ms(1000);
+	delay_ms(1000);	
+	delay_ms(1000);
+	delay_ms(1000);	
 	
 	TIM4_Encode_Init();
 	TIM2_Int_Init(8400, 300);    //30ms，可开关，发指令到变频器

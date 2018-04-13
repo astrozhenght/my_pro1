@@ -22,16 +22,11 @@
 #define DIR_LEFT   				2  //向左运动
 #define DIR_RIGHT  				3  //向右运动
 
-#define ORDER_NONE			   	1  //无命令
-#define ORDER_DIR   			2  //方向
-#define ORDER_SPD  				3  //速度
-
 #define RECEIVE2			    1 
 #define SEND2    				2  
 #define WAITING    				3  
 
 extern vu8   TIM5_Count;
-extern u8    Motor_Dir;    //电机方向
 extern float EXP_LOC;
 
 extern vu8   Status_Motion;	
@@ -39,8 +34,8 @@ extern vu8   Flag_Init;
 extern vu8   order_type;   //变频器命令类型
 
 extern float Last_Speed;   //上一次的速度值，如果和当前的速度不相等就要改变速度
-extern u8    Motor_Dir;    //电机当前方向，默认停止
-extern u8    Last_Dir;     //电机上次的方向，默认停止
+extern vu8   Motor_Dir;    //电机当前方向，默认停止
+extern vu8   Last_Dir;     //电机上次的方向，默认停止
 
 void Mode_Control(void);
 void Motor_Restore(void);

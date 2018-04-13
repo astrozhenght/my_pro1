@@ -68,4 +68,25 @@ void RS485_Init(u32 bound)
 }
 
 
+/**
+ *作用：RS485发送字符数组
+ *形参：buf发送区首地址
+**/
+void RS485_Send_Data(u8 *buf, u8 len)
+{
+	u8 t;  											//len是字符串长度
+	RS485_TX_EN = SEND;								//设置为发送模式
+	RS485_RX_EN = SEND;
+	
+	for(t = 0; t < len; t++)					//循环发送数据
+	{
+	  while(USART_GetFlagStatus(USART2, USART_FLAG_TC)==RESET){}; //等待发送结束		
+    USART_SendData(USART2, buf[t]); 
+	}	 
+	while(USART_GetFlagStatus(USART2,USART_FLAG_TC)==RESET); 			//等待发送结束
+	
+	RS485_TX_EN = RECEIVE;						//设置为接收模式
+	RS485_RX_EN = RECEIVE;
+}
+
 

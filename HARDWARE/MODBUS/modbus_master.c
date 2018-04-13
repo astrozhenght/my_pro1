@@ -3,9 +3,10 @@
 #include "dma.h"
 #include "rs485.h"
 #include "string.h"
+#include "control.h"
 
 #define RS485_ADDR  0x01    //主机地址
-#define REG_MAX	    0x3000   
+#define REG_MAX	    0x4000   
 
 u16     REG_Start_Addr2;  	//寄存器起始地址变量，两个字节组成
 
@@ -15,7 +16,7 @@ u16     REG_Start_Addr2;  	//寄存器起始地址变量，两个字节组成
 **/
 void FREQ_Change_Freq(float val)
 {
-	u16 freq;
+	u16 freq; 
 	u16 crc;
 	freq = (u16)(val*100);
 	SendBuff_485[0] = 0x01;
@@ -28,7 +29,8 @@ void FREQ_Change_Freq(float val)
 	//计算CRC校验码
 	crc = CRC16(SendBuff_485, 6);
 	SendBuff_485[6] = (u8)(crc&0xFF);   //CRC的低字节
-	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节	
+	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节
+//	RS485_Send_Data(SendBuff_485, 8);	
 	DMA1_485_Send(8);
 }
 
@@ -49,6 +51,7 @@ void Motor_Right(void)
 	crc = CRC16(SendBuff_485, 6);
 	SendBuff_485[6] = (u8)(crc&0xFF);   //CRC的低字节
 	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节	
+//	RS485_Send_Data(SendBuff_485, 8);	
 	DMA1_485_Send(8);
 }
 
@@ -70,6 +73,7 @@ void Motor_Left(void)
 	SendBuff_485[6] = (u8)(crc&0xFF);   //CRC的低字节
 	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节	
 	DMA1_485_Send(8);
+//	RS485_Send_Data(SendBuff_485, 8);	
 }
 
 /**
@@ -90,6 +94,7 @@ void Motor_Stop(void)
 	SendBuff_485[6] = (u8)(crc&0xFF);   //CRC的低字节
 	SendBuff_485[7] = (u8)(crc>>8);   	//CRC的高字节	
 	DMA1_485_Send(8);
+//	RS485_Send_Data(SendBuff_485, 8);	
 }
 
 
@@ -184,6 +189,10 @@ void Modbus2_06_Solve(void)
 	i = strcmp((const char *)SendBuff_485, (const char *)ReceBuff_485);
 	if(i == 0) //PLC发送和变频器回复一致
 	{
+		if(ReceBuff_485[3] == 0x01)
+			Last_Speed = Data_RunSpeed;
+		else if(ReceBuff_485[3] == 0x00)
+			Last_Dir = Motor_Dir; //不会重发，通信完成
 		Status_Alarm = 1; //通信正常
 	}
 	else  //非法数据值
