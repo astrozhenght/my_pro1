@@ -473,11 +473,6 @@
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\MODBUS\modbus_slave.c</FilePath>
             </File>
-            <File>
-              <FileName>pid.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\HARDWARE\PID\pid.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>

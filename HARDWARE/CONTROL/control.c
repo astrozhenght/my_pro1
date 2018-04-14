@@ -83,7 +83,7 @@ void Mode_Control(void)
 			Button_Stop = 0;
 		}
 	}
-	if(Flag_Mode == MODE_AUTO)  //自动模式
+	else if(Flag_Mode == MODE_AUTO)  //自动模式
 	{
 		if(Button_Start == 1)  //按下启动按钮
 		{
@@ -127,7 +127,7 @@ void Mode_Control(void)
 			Button_Stop = 0;  
 		}	
 	}
-	if(Flag_Mode == MODE_SINGLE)  //单步模式
+	else if(Flag_Mode == MODE_SINGLE)  //单步模式
 	{
 		if(Button_Start == 1) //按下启动按钮
 		{
@@ -181,7 +181,7 @@ void Mode_Control(void)
 			Button_Stop = 0;
 		}	
 	}
-	if(Flag_Mode == MODE_MANUAL)  //手动模式
+	else if(Flag_Mode == MODE_MANUAL)  //手动模式
 	{		
 		if(Status_Motion == STATUS_REST)  //当前状态为静止状态
 		{		
@@ -328,8 +328,8 @@ void FreqChg_Control(void)
 		}
 		else if(Last_Speed != Data_RunSpeed) //速度改变
 		{	
-			//近似认为速度和频率呈线性关系，比例系数求得为4.13
-			FREQ_Change_Freq(Data_RunSpeed * 4.13f); //更改变频器的频率
+			//近似认为速度和频率呈线性关系，比例系数求得为4.1
+			FREQ_Change_Freq(Data_RunSpeed * 4.1f); //更改变频器的频率
 			communicate = WAITING; //等待30ms			
 			TIM_Cmd(TIM2, ENABLE); //使能定时器2
 		}	
@@ -460,9 +460,13 @@ void EXTI9_5_IRQHandler(void)
 		}
 		else  //其他状况碰到左极限
 		{
-			Motor_Dir = DIR_STOP; //电机方向改为停止				
-			Status_Motion = STATUS_REST;
-			Data_Stage = 0;  //段数归零
+			delay_ms(10);
+			if(GPIO_ReadInputDataBit(GPIOI, GPIO_Pin_7)==1) //消抖
+			{
+				Motor_Dir = DIR_STOP; //电机方向改为停止				
+				Status_Motion = STATUS_REST;
+				Data_Stage = 0;  //段数归零
+			}
 		}
 		EXTI_ClearFlag(EXTI_Line7);		
 	}
@@ -484,8 +488,12 @@ void EXTI9_5_IRQHandler(void)
 	}	
 	if(EXTI_GetFlagStatus(EXTI_Line5)) //右极限
 	{
-		Motor_Dir = DIR_STOP; 	//电机方向改为停止	
-		Status_Motion = STATUS_REST; //当前为静止状态	
+		delay_ms(10);
+		if(GPIO_ReadInputDataBit(GPIOI, GPIO_Pin_5) == 1) //消抖
+		{
+			Motor_Dir = DIR_STOP; 	//电机方向改为停止	
+			Status_Motion = STATUS_REST; //当前为静止状态	
+		}
 		EXTI_ClearFlag(EXTI_Line5);
 	}
 }
@@ -569,7 +577,7 @@ void FreqRev_Deal(void)
 			{
 				Last_Speed = Data_RunSpeed;
 				Last_Dir = Motor_Dir;
-				Data_Error = 5;   //回路不畅
+				Data_Error = 4;   //回路不畅
 				Status_Alarm = 0; //通信报错
 			}	
 		}
@@ -595,25 +603,25 @@ void TIM3_IRQHandler(void)
 		Increment = TIM4->CNT; //获取编码器脉冲数
 		TIM4->CNT = 0;  //TIM4计数器的值归0
 		
-		//换算得到速度值：Increment*2.5mm/1024脉冲/20ms
-		if(Increment < 1024)
+		//换算得到速度值：Increment*2.565mm/998脉冲/20ms
+		if(Increment < 998)
 		{
-			Data_RTSpeed = -1.0f * Increment * 2.5f / 2048.0f / 0.02f;  //反转
+			Data_RTSpeed = -1.0f * Increment * 2.5f / 1996.0f / 0.02f;  //反转
 			Encoder_Pulse_NUM -= Increment;
 		}			
-		else if(Increment > 1024)		
+		else if(Increment > 998)		
 		{
-			Data_RTSpeed = (Parameter - Increment) * 2.5f / 2048.0f / 0.02f;  //正转
+			Data_RTSpeed = (Parameter - Increment) * 2.5f / 1996.0f / 0.02f;  //正转
 			Encoder_Pulse_NUM += (Parameter - Increment);			
 		}
 		//位置：脉冲数*2.5mm/1024 单位mm
-		Data_Location = Encoder_Pulse_NUM * 2.5 / 2048;		
+		Data_Location = Encoder_Pulse_NUM * 2.5f / 1996;		
 		Data_Animation = (int)Data_Location; //动画位置		
 		if(Status_Motion == STATUS_AUTOMOD) //自动模式运动状态下
 		{
 			if(Data_Stage <= 3) //前四段运行中
 			{			
-				if(Encoder_Pulse_NUM >= 32768 * Data_Stage)  //运动超过了40mm，换速
+				if(Encoder_Pulse_NUM >= 31936 * Data_Stage)  //运动超过了40mm，换速
 				{
 					Data_Stage++;  	 //段数加1，最多加到4
 					Data_RunSpeed = Present_Data_Speed[Data_Stage-1]; //段数为1时取Present_Data_Speed[0]作为当前段速					
@@ -621,7 +629,7 @@ void TIM3_IRQHandler(void)
 			}		
 			if(Data_Stage == 4)  //第四段运行中
 			{
-				if(Encoder_Pulse_NUM >= (32768 * 3 + 32700))  //超过指定位置
+				if(Encoder_Pulse_NUM >= (31936 * 3 + 31860))  //超过指定位置
 				{
 					Data_Stage++; 
 					Status_Wait = 1;		//等待指示灯亮
@@ -629,7 +637,7 @@ void TIM3_IRQHandler(void)
 					TIM5_Count = 15; 		//定时器5将进入15次中断，即3s钟
 					TIM_Cmd(TIM5, ENABLE); 	//使能定时器5
 				}
-				else if(Encoder_Pulse_NUM >= (32768 * 3 + 26624))  //运动到160mm前三圈，换速
+				else if(Encoder_Pulse_NUM >= (31936 * 3 + 25948))  //运动到160mm前三圈，换速
 				{
 					Data_RunSpeed = 2.0f; //低速前进
 				}	
@@ -669,12 +677,12 @@ void TIM3_IRQHandler(void)
 		{
 			if(Data_Stage <= 4)  //段数小于等于4
 			{
-				if(Encoder_Pulse_NUM >= (32768 * (Data_Stage-1) + 32700))  //超过指定位置
+				if(Encoder_Pulse_NUM >= (31936 * (Data_Stage-1) + 31860))  //超过指定位置
 				{
 					Motor_Dir = DIR_STOP; 	//电机停止转动
 					Status_Motion = STATUS_REST;					
 				}
-				else if(Encoder_Pulse_NUM >= (32768 * (Data_Stage-1) + 26624))  //运动到160mm前三圈，换速
+				else if(Encoder_Pulse_NUM >= (31936 * (Data_Stage-1) + 25948))  //运动到160mm前三圈，换速
 				{
 					Data_RunSpeed = 2.0f; //低速前进
 				}
