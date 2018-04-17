@@ -41,6 +41,7 @@ u16   Button_Left = 0;        //左运动按钮
 u16   Button_Right = 0;       //右运动按钮 
 int   Data_Animation = 0;     //动画位置
 u16   Data_Error = 0;     	  //错误码
+u16   Data_Error_num = 0;     //485接收出错次数
 
 u16*  Modbus_HoldReg[REG_MAX];  //保持寄存器指针，一个字节
 
@@ -90,6 +91,7 @@ void Modbus_RegMap(void)
 	Modbus_HoldReg[100] = ((u16*)(&Data_RunSpeed))+1;//运行速度   
 	Modbus_HoldReg[101] = ((u16*)(&Data_RunSpeed))+0;		
 	Modbus_HoldReg[102] = &Data_Error;	 //错误码  
+	Modbus_HoldReg[103] = &Data_Error_num;	 //出错次数  
 	
 	Modbus_HoldReg[200] = &Present_Mode;   //表示当前模式
 }
