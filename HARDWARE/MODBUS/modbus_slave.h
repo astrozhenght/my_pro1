@@ -21,7 +21,7 @@ extern u16   Status_EndRight; //右极限指示灯
 extern u16   Status_DirLeft;  //左运动指示灯
 extern u16   Status_DirRight; //右运动指示灯
 
-extern float Data_RTSpeed; 	//实时速度
+extern float Data_RTSpeed; 	  //实时速度
 extern float Data_Location;   //实时位置
 extern float Data_Speed1;     //段速1
 extern float Data_Speed2;     //段速2
@@ -29,14 +29,15 @@ extern float Data_Speed3;     //段速3
 extern float Data_Speed4;     //段速4
 extern float Data_BKSpeed;    //返回速度
 
-extern u16   Data_Stage;   	//单步段数
-extern float Data_Speed; 		//单步段速
+extern u16   Data_Stage;   	  //单步段数
+extern float Data_Speed; 	  //单步段速
 
-extern float Data_RunSpeed; 	//运行速度
+extern float Data_RunSpeed;   //运行速度
 extern u16   Button_Left;     //左运动按钮 
 extern u16   Button_Right;    //右运动按钮 
 extern int   Data_Animation;  //动画位置
-extern u16   Data_Error;     	  //错误码
+extern u16   Data_Error;      //错误码
+extern u16   Data_Error_num;  //485接收出错次数
 
 void Modbus_Parse(void);
 

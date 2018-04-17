@@ -579,6 +579,7 @@ void FreqRev_Deal(void)
 				Last_Dir = Motor_Dir;
 				Data_Error = 4;   //回路不畅
 				Status_Alarm = 0; //通信报错
+				Data_Error_num++; //485通信失败次数加1
 			}	
 		}
 		

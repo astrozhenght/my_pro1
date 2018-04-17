@@ -161,7 +161,6 @@ void Modbus2_Parse(void)
 **/ 
 void Modbus2_03_Solve(void)
 {
-	u8 i;
 	u16 reg_num;
 	reg_num = ((u16)ReceBuff_485[2]) % 2;   //获取寄存器数量
 	if(REG_Start_Addr2 + reg_num < REG_MAX)  //寄存器地址+数量在范围内
